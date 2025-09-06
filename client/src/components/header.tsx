@@ -20,9 +20,9 @@ export function Header() {
             </span>
           </Link>
           <nav className="hidden md:flex space-x-6">
-            <a href="#exchange" className="text-foreground hover:text-primary transition-colors" data-testid="link-exchange">
+            <Link href="/" className="text-foreground hover:text-primary transition-colors" data-testid="link-exchange">
               {t('header.nav.exchange')}
-            </a>
+            </Link>
             <a href="#rates" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-rates">
               {t('header.nav.rates')}
             </a>
