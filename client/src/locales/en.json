@@ -36,7 +36,12 @@
     "email": "Email (optional)",
     "terms": "I agree to the Terms of Service and AML Policy. I understand that this exchange may require additional verification for compliance purposes.",
     "min": "Min",
-    "max": "Max"
+    "max": "Max",
+    "recipientAddress": "Recipient Address (Optional)",
+    "walletAddress": "Wallet Address",
+    "walletAddressPlaceholder": "Enter destination wallet address",
+    "cryptoPayout": "Crypto Payout",
+    "cardPayout": "Card Payout"
   },
   "features": {
     "title": "Why Choose CryptoFlow?",

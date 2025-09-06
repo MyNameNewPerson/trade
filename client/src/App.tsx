@@ -8,6 +8,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "./lib/i18n";
 import Home from "@/pages/home";
 import OrderStatus from "@/pages/order-status";
+import Rates from "@/pages/rates";
+import Support from "@/pages/support";
+import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +18,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/order-status" component={OrderStatus} />
+      <Route path="/rates" component={Rates} />
+      <Route path="/support" component={Support} />
+      <Route path="/about" component={About} />
       <Route component={NotFound} />
     </Switch>
   );
