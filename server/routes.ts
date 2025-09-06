@@ -11,8 +11,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply security middleware
   app.use(security.corsHeaders);
-  app.use(security.rateLimiter);
-  app.use(security.validateInput);
+  app.use('/api', security.rateLimiter);
+  app.use('/api', security.validateInput);
   
   // WebSocket server for real-time rate updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });

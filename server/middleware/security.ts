@@ -12,7 +12,7 @@ class SecurityMiddleware {
 
   private cleanupOldEntries() {
     const now = Date.now();
-    for (const [key, entry] of this.rateLimitMap.entries()) {
+    for (const [key, entry] of Array.from(this.rateLimitMap.entries())) {
       if (now > entry.resetTime) {
         this.rateLimitMap.delete(key);
       }

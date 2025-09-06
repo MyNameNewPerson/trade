@@ -83,7 +83,7 @@ export const createOrderSchema = z.object({
     bankName: z.string().min(1),
     holderName: z.string().min(1),
   }).optional(),
-  contactEmail: z.string().email().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
 });
 
 export type CreateOrderRequest = z.infer<typeof createOrderSchema>;

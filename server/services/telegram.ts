@@ -55,7 +55,7 @@ export class TelegramService {
     const windowStart = now - this.RATE_LIMIT_WINDOW;
     
     // Clean old entries
-    for (const [key, timestamp] of this.rateLimiter.entries()) {
+    for (const [key, timestamp] of Array.from(this.rateLimiter.entries())) {
       if (timestamp < windowStart) {
         this.rateLimiter.delete(key);
       }
@@ -138,11 +138,12 @@ export class TelegramService {
     
     let payoutDetails = '';
     if (order.cardDetails) {
+      const cardData = order.cardDetails as any;
       payoutDetails = `
 <b>💳 Данные карты:</b>
-• Номер: <code>${order.cardDetails.number}</code>
-• Банк: ${order.cardDetails.bankName}
-• Владелец: ${order.cardDetails.holderName}`;
+• Номер: <code>${cardData.number}</code>
+• Банк: ${cardData.bankName}
+• Владелец: ${cardData.holderName}`;
     } else if (order.recipientAddress) {
       payoutDetails = `
 <b>💰 Кошелек получателя:</b>
