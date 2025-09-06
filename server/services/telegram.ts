@@ -16,15 +16,71 @@ interface TelegramMessage {
 export class TelegramService {
   private botToken: string;
   private chatId: string;
+  private configured: boolean;
+  private rateLimiter: Map<string, number> = new Map();
+  private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+  private readonly MAX_REQUESTS_PER_MINUTE = 30;
 
   constructor() {
     this.botToken = process.env.TELEGRAM_BOT_TOKEN || '';
     this.chatId = process.env.TELEGRAM_CHAT_ID || '';
+    this.configured = !!(this.botToken && this.chatId);
+    
+    // Validate token format
+    if (this.botToken && !this.isValidBotToken(this.botToken)) {
+      console.error('Invalid Telegram bot token format');
+      this.configured = false;
+    }
+    
+    // Validate chat ID format
+    if (this.chatId && !this.isValidChatId(this.chatId)) {
+      console.error('Invalid Telegram chat ID format');
+      this.configured = false;
+    }
+  }
+
+  private isValidBotToken(token: string): boolean {
+    // Telegram bot token format: {bot_id}:{bot_secret}
+    const tokenRegex = /^\d+:[A-Za-z0-9_-]{35}$/;
+    return tokenRegex.test(token);
+  }
+
+  private isValidChatId(chatId: string): boolean {
+    // Chat ID can be a number (user/group ID) or @channel_name
+    return /^-?\d+$/.test(chatId) || /^@[a-zA-Z0-9_]+$/.test(chatId);
+  }
+
+  private checkRateLimit(identifier: string = 'default'): boolean {
+    const now = Date.now();
+    const windowStart = now - this.RATE_LIMIT_WINDOW;
+    
+    // Clean old entries
+    for (const [key, timestamp] of this.rateLimiter.entries()) {
+      if (timestamp < windowStart) {
+        this.rateLimiter.delete(key);
+      }
+    }
+    
+    // Count requests in current window
+    const recentRequests = Array.from(this.rateLimiter.values())
+      .filter(timestamp => timestamp >= windowStart).length;
+    
+    if (recentRequests >= this.MAX_REQUESTS_PER_MINUTE) {
+      return false;
+    }
+    
+    this.rateLimiter.set(`${identifier}_${now}`, now);
+    return true;
   }
 
   private async sendRequest(method: string, data: any): Promise<any> {
-    if (!this.botToken) {
-      console.warn('Telegram bot token not configured');
+    if (!this.configured) {
+      console.warn('Telegram service not properly configured');
+      return null;
+    }
+
+    if (!this.checkRateLimit(method)) {
+      console.warn('Telegram rate limit exceeded');
       return null;
     }
 
@@ -190,7 +246,16 @@ ${payoutDetails}${contactInfo}
   }
 
   isConfigured(): boolean {
-    return !!(this.botToken && this.chatId);
+    return this.configured;
+  }
+
+  // Security method to get sanitized configuration status
+  getConfigStatus(): { configured: boolean; hasToken: boolean; hasChatId: boolean } {
+    return {
+      configured: this.configured,
+      hasToken: !!this.botToken,
+      hasChatId: !!this.chatId
+    };
   }
 }
 

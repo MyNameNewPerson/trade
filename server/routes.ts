@@ -4,9 +4,15 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { createOrderSchema } from "@shared/schema";
 import { z } from "zod";
+import { security } from "./middleware/security";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Apply security middleware
+  app.use(security.corsHeaders);
+  app.use(security.rateLimiter);
+  app.use(security.validateInput);
   
   // WebSocket server for real-time rate updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -102,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new order
-  app.post('/api/orders', async (req, res) => {
+  app.post('/api/orders', security.orderCreationLimiter, async (req, res) => {
     try {
       const validatedData = createOrderSchema.parse(req.body);
       const order = await storage.createOrder(validatedData);
