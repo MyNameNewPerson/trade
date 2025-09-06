@@ -1,0 +1,127 @@
+{
+  "header": {
+    "title": "CryptoFlow",
+    "nav": {
+      "exchange": "Schimb",
+      "rates": "Cursuri",
+      "about": "Despre",
+      "support": "Suport"
+    },
+    "trackOrder": "Urmărește comanda"
+  },
+  "hero": {
+    "title": "Schimb sigur de criptomonede",
+    "subtitle": "Schimburi rapide, sigure și anonime crypto-to-crypto și crypto-to-fiat",
+    "features": {
+      "support": "Suport 24/7",
+      "noRegistration": "Fără înregistrare necesară",
+      "bestRates": "Cele mai bune cursuri de schimb"
+    }
+  },
+  "exchange": {
+    "title": "Schimb",
+    "fixedRate": "Curs fix",
+    "floatRate": "Curs flotant",
+    "youSend": "Trimiteți",
+    "youReceive": "Primiți",
+    "exchangeRate": "Curs de schimb",
+    "platformFee": "Taxa platformei",
+    "networkFee": "Taxa rețelei",
+    "rateLocked": "Cursul blocat pentru",
+    "createOrder": "Creează comanda de schimb",
+    "cardDetails": "Detalii card",
+    "cardNumber": "Numărul cardului",
+    "bankName": "Numele băncii",
+    "holderName": "Numele posesorului cardului",
+    "email": "Email (opțional)",
+    "terms": "Sunt de acord cu Termenii de utilizare și Politica AML. Înțeleg că acest schimb poate necesita verificare suplimentară în scopuri de conformitate.",
+    "min": "Min",
+    "max": "Max"
+  },
+  "features": {
+    "title": "De ce să alegi CryptoFlow?",
+    "subtitle": "Oferim servicii de schimb de criptomonede sigure, rapide și de încredere cu cele mai bune cursuri de pe piață.",
+    "secure": {
+      "title": "Sigur și protejat",
+      "description": "Măsuri avansate de securitate și conformitate AML pentru protejarea fondurilor dumneavoastră."
+    },
+    "fast": {
+      "title": "Fulger de rapid",
+      "description": "Majoritatea schimburilor se finalizează automat în 5-30 de minute."
+    },
+    "noRegistration": {
+      "title": "Fără înregistrare",
+      "description": "Începeți schimbul imediat fără procese lungi de înregistrare."
+    },
+    "support": {
+      "title": "Suport 24/7",
+      "description": "Suport clienți non-stop pentru asistență la schimburile dumneavoastră."
+    }
+  },
+  "currencies": {
+    "title": "Valute suportate",
+    "subtitle": "Suportăm principalele criptomonede și plăți fiat către carduri bancare"
+  },
+  "orderTracking": {
+    "title": "Urmărește comanda",
+    "subtitle": "Monitorizați progresul schimbului în timp real",
+    "enterOrderId": "Introduceți ID-ul comenzii",
+    "trackOrder": "Urmărește comanda",
+    "orderDetails": "Detalii comandă",
+    "exchangeDetails": "Detalii schimb",
+    "paymentInfo": "Informații de plată",
+    "depositAddress": "Adresa de depozit",
+    "payoutDetails": "Detalii de plată",
+    "timeRemaining": "Timp rămas",
+    "copyAddress": "Copiază adresa de depozit",
+    "contactSupport": "Contactează suportul",
+    "status": {
+      "awaiting_deposit": "Se așteaptă depozitul",
+      "confirmed": "Confirmat",
+      "processing": "În procesare",
+      "completed": "Finalizat",
+      "failed": "Eșuat",
+      "refunded": "Rambursat"
+    },
+    "steps": {
+      "created": "Comanda creată",
+      "awaitingPayment": "Se așteaptă plata",
+      "processing": "În procesare",
+      "completed": "Finalizat"
+    }
+  },
+  "chat": {
+    "title": "Chat suport",
+    "subtitle": "Suntem aici să vă ajutăm 24/7",
+    "placeholder": "Tastați mesajul...",
+    "send": "Trimite",
+    "defaultMessage": "Salut! Cum vă pot ajuta astăzi?"
+  },
+  "footer": {
+    "description": "Platformă de schimb de criptomonede sigură și de încredere cu cele mai bune cursuri și suport 24/7.",
+    "services": "Servicii",
+    "support": "Suport",
+    "legal": "Legal",
+    "links": {
+      "cryptoExchange": "Schimb cripto",
+      "cardPayouts": "Plăți cu cardul",
+      "fixedRate": "Curs fix",
+      "floatRate": "Curs flotant",
+      "helpCenter": "Centru de ajutor",
+      "contactUs": "Contactați-ne",
+      "trackOrder": "Urmărește comanda",
+      "apiDocs": "Documentație API",
+      "terms": "Termeni de utilizare",
+      "privacy": "Politica de confidențialitate",
+      "aml": "Politica AML",
+      "kyc": "Politica KYC"
+    },
+    "copyright": "© 2024 CryptoFlow. Toate drepturile rezervate."
+  },
+  "errors": {
+    "orderNotFound": "Comanda nu a fost găsită",
+    "invalidOrderId": "Vă rugăm să introduceți un ID de comandă valid",
+    "networkError": "Eroare de rețea. Vă rugăm să încercați din nou.",
+    "validationError": "Vă rugăm să verificați datele introduse și să încercați din nou."
+  }
+}

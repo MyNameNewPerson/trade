@@ -1,0 +1,127 @@
+{
+  "header": {
+    "title": "CryptoFlow",
+    "nav": {
+      "exchange": "Exchange",
+      "rates": "Rates",
+      "about": "About",
+      "support": "Support"
+    },
+    "trackOrder": "Track Order"
+  },
+  "hero": {
+    "title": "Secure Cryptocurrency Exchange",
+    "subtitle": "Fast, secure, and anonymous crypto-to-crypto and crypto-to-fiat exchanges",
+    "features": {
+      "support": "24/7 Support",
+      "noRegistration": "No Registration Required",
+      "bestRates": "Best Exchange Rates"
+    }
+  },
+  "exchange": {
+    "title": "Exchange",
+    "fixedRate": "Fixed Rate",
+    "floatRate": "Float Rate",
+    "youSend": "You send",
+    "youReceive": "You receive",
+    "exchangeRate": "Exchange Rate",
+    "platformFee": "Platform Fee",
+    "networkFee": "Network Fee",
+    "rateLocked": "Rate locked for",
+    "createOrder": "Create Exchange Order",
+    "cardDetails": "Card Details",
+    "cardNumber": "Card Number",
+    "bankName": "Bank Name",
+    "holderName": "Card Holder Name",
+    "email": "Email (optional)",
+    "terms": "I agree to the Terms of Service and AML Policy. I understand that this exchange may require additional verification for compliance purposes.",
+    "min": "Min",
+    "max": "Max"
+  },
+  "features": {
+    "title": "Why Choose CryptoFlow?",
+    "subtitle": "We provide secure, fast, and reliable cryptocurrency exchange services with the best rates in the market.",
+    "secure": {
+      "title": "Secure & Safe",
+      "description": "Advanced security measures and AML compliance to protect your funds."
+    },
+    "fast": {
+      "title": "Lightning Fast",
+      "description": "Most exchanges completed within 5-30 minutes automatically."
+    },
+    "noRegistration": {
+      "title": "No Registration",
+      "description": "Start exchanging immediately without lengthy registration processes."
+    },
+    "support": {
+      "title": "24/7 Support",
+      "description": "Round-the-clock customer support to assist with your exchanges."
+    }
+  },
+  "currencies": {
+    "title": "Supported Currencies",
+    "subtitle": "We support major cryptocurrencies and fiat payouts to bank cards"
+  },
+  "orderTracking": {
+    "title": "Track Your Order",
+    "subtitle": "Monitor your exchange progress in real-time",
+    "enterOrderId": "Enter your order ID",
+    "trackOrder": "Track Order",
+    "orderDetails": "Order Details",
+    "exchangeDetails": "Exchange Details",
+    "paymentInfo": "Payment Information",
+    "depositAddress": "Deposit Address",
+    "payoutDetails": "Payout Details",
+    "timeRemaining": "Time remaining",
+    "copyAddress": "Copy Deposit Address",
+    "contactSupport": "Contact Support",
+    "status": {
+      "awaiting_deposit": "Awaiting Deposit",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    },
+    "steps": {
+      "created": "Order Created",
+      "awaitingPayment": "Awaiting Payment",
+      "processing": "Processing",
+      "completed": "Completed"
+    }
+  },
+  "chat": {
+    "title": "Support Chat",
+    "subtitle": "We're here to help 24/7",
+    "placeholder": "Type your message...",
+    "send": "Send",
+    "defaultMessage": "Hello! How can I help you today?"
+  },
+  "footer": {
+    "description": "Secure and reliable cryptocurrency exchange platform with the best rates and 24/7 support.",
+    "services": "Services",
+    "support": "Support",
+    "legal": "Legal",
+    "links": {
+      "cryptoExchange": "Crypto Exchange",
+      "cardPayouts": "Card Payouts",
+      "fixedRate": "Fixed Rate",
+      "floatRate": "Float Rate",
+      "helpCenter": "Help Center",
+      "contactUs": "Contact Us",
+      "trackOrder": "Track Order",
+      "apiDocs": "API Documentation",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "aml": "AML Policy",
+      "kyc": "KYC Policy"
+    },
+    "copyright": "© 2024 CryptoFlow. All rights reserved."
+  },
+  "errors": {
+    "orderNotFound": "Order not found",
+    "invalidOrderId": "Please enter a valid order ID",
+    "networkError": "Network error. Please try again.",
+    "validationError": "Please check your input and try again."
+  }
+}
