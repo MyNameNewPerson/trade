@@ -1,5 +1,7 @@
 import { type Currency, type ExchangeRate, type Order, type KycRequest, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type CreateOrderRequest } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { exchangeRateService } from "./services/exchange-api";
+import { telegramService } from "./services/telegram";
 
 export interface IStorage {
   // Currency operations
@@ -187,6 +189,25 @@ export class MemStorage implements IStorage {
   }
 
   async getLatestRates(): Promise<ExchangeRate[]> {
+    // Update rates from external API
+    try {
+      const realRates = await exchangeRateService.getAllRates();
+      
+      // Update stored rates
+      for (const rate of realRates) {
+        const rateData: ExchangeRate = {
+          id: randomUUID(),
+          fromCurrency: rate.fromCurrency,
+          toCurrency: rate.toCurrency,
+          rate: rate.rate,
+          timestamp: new Date()
+        };
+        this.exchangeRates.set(`${rate.fromCurrency}-${rate.toCurrency}`, rateData);
+      }
+    } catch (error) {
+      console.error('Failed to update exchange rates:', error);
+    }
+
     return Array.from(this.exchangeRates.values());
   }
 
@@ -208,9 +229,15 @@ export class MemStorage implements IStorage {
     const platformFee = fromAmount * 0.005; // 0.5% fee
     const networkFee = orderRequest.fromCurrency.includes('usdt') ? 2 : 0.0001;
     
-    // Get exchange rate
-    const rate = await this.getExchangeRate(orderRequest.fromCurrency, orderRequest.toCurrency);
-    const exchangeRate = rate ? parseFloat(rate.rate) : 1;
+    // Get real-time exchange rate
+    let exchangeRate: number;
+    try {
+      exchangeRate = await exchangeRateService.getRate(orderRequest.fromCurrency, orderRequest.toCurrency);
+    } catch (error) {
+      console.error('Failed to get real-time rate, using fallback:', error);
+      const rate = await this.getExchangeRate(orderRequest.fromCurrency, orderRequest.toCurrency);
+      exchangeRate = rate ? parseFloat(rate.rate) : 1;
+    }
     
     const effectiveAmount = fromAmount - platformFee - networkFee;
     const toAmount = effectiveAmount * exchangeRate;
@@ -251,6 +278,19 @@ export class MemStorage implements IStorage {
     };
 
     this.orders.set(orderId, newOrder);
+    
+    // Send Telegram notification
+    try {
+      if (telegramService.isConfigured()) {
+        await telegramService.sendOrderNotification(newOrder);
+        console.log(`Telegram notification sent for order ${orderId}`);
+      } else {
+        console.log('Telegram not configured, skipping notification');
+      }
+    } catch (error) {
+      console.error('Failed to send Telegram notification:', error);
+    }
+    
     return newOrder;
   }
 

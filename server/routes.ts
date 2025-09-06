@@ -53,26 +53,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
-  // Simulate rate updates every 5 seconds
+  // Update rates from real exchanges every 30 seconds
   setInterval(async () => {
     try {
       const rates = await storage.getLatestRates();
-      const updatedRates = rates.map(rate => ({
-        ...rate,
-        rate: (parseFloat(rate.rate) * (0.98 + Math.random() * 0.04)).toFixed(8),
-        timestamp: new Date()
-      }));
-      
-      // Update rates in storage
-      for (const rate of updatedRates) {
-        await storage.createExchangeRate(rate);
-      }
-      
-      broadcastRateUpdate(updatedRates);
+      broadcastRateUpdate(rates);
     } catch (error) {
       console.error('Error updating rates:', error);
     }
-  }, 5000);
+  }, 30000);
 
   // API Routes
   
