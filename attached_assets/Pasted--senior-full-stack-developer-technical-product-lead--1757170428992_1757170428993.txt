@@ -1,0 +1,113 @@
+Ты — senior full-stack developer / technical product lead. Твоя задача: разработать адаптивный, безопасный крипто-обменник по образцу FixedFloat (non-custodial, fixed/float) + функционал обмена crypto → card и аккаунтного управления, как у wx.money. Используй лучшие практики безопасности и готовь артефакты поэтапно — от MVP до production. Думай шаг-за-шагом и возвращай результат в виде набора артефактов (см. ниже).
+
+Цель продукта (высокоуровнево):
+- Позволять пользователю обменять криптовалюту на другую криптовалюту или на фиат (вывод на банковскую карту).
+- Поддерживать выбор сети для tokenized монет (ERC20/TRC20/BEP20 и т.д.).
+- Поддерживать режимы курса: FIXED (блокировка курса на TTL, комиссия ≈ 1%) и FLOAT (курс по факту подтверждений, комиссия ≈ 0.5%).
+- Поддерживать ручной режим выплат оператором (оператор получает детали заказа в Telegram и может вручную выполнить выплату монетой или перевод на карту).
+- Поддерживать аккаунты/верификацию для опционального KYC/AML (как на wx.money).
+- Не хранить полные данные карт (PAN) — только masked/tokenized info; для автоматических выплат подключать PCI-совместимого провайдера.
+
+Требуемые выходы (для каждого этапа):
+1. Документ «Product Spec» — описание флоу пользователя и оператора, поля формы, валидации.
+2. ER-схема БД + SQL миграции.
+3. OpenAPI (Swagger) для всех публичных и внутренних эндпойнтов.
+4. React-виджет обмена (адаптивный) + страница статуса заказа.
+5. Backend skeleton (Node.js/TypeScript + Express/Nest) с реализацией `/api/orders/create`, `/api/orders/{id}`, `/api/webhook/node`, `/api/admin/orders/*`.
+6. Микросервис мониторинга блокчейнов (websocket/polling).
+7. Админ-панель (оператор) с кнопками «Выплатить вручную», «Запрос KYC», журнал действий (audit-trail).
+8. Telegram-бот/интеграция: шаблоны сообщений, inline-кнопки, callback-handler для операций.
+9. Security checklist, Key Management (HSM/Vault), рекомендации по hot/cold wallets.
+10. Acceptance tests + E2E тест для полного флоу (testnet).
+
+Функциональные требования (детально):
+- **Exchange widget**:
+  - Поля: Отдаёте (coin + сеть), Получаете (coin + сеть), сумма (ввод отправляемой или получаемой), тип курса (fixed/float), контакт (email/telegram — опционально), checkbox подтверждения правил и AML.
+  - Показывать: курс, комиссия платформы, miner/network fee, expected receive, min/max лимиты, TTL (для fixed).
+  - Валидация: сумма в пределах min/max для пары и сети; формат адреса/тега; обязательный согласие с правилами.
+- **Order flow**:
+  - Создать `order` → сгенерировать уникальный `deposit_address` (или memo) → статус `AWAITING_DEPOSIT`.
+  - Мониторинг входящих TX → при требуемых подтверждениях перевод в `CONFIRMED` → либо автоматический payout (если настроено) либо уведомление оператору → оператор делает выплату и помечает `PAID` с указанием tx_hash.
+  - При fixed: блокировка курса на TTL (пример: 10 минут) и поведение при расхождении (manual_review / request_refund / continue_at_market).
+- **Payouts crypto / fiat**:
+  - Crypto: поддерживать multi-sig/hsm подпись, лимиты автоматической выплаты, approval workflow.
+  - Fiat (карты): НЕ ХРАНИТЬ PAN. Поддержка masked card в базе, интеграция с tokenized payout provider (опционально) или ручная отметка оператора.
+  - Все данные заказа (адрес депозита, карта masked, contact, expected receive, TTL, order_id) — отправляются в Telegram оператору при создании и при получении депозита.
+- **Admin / Operator UI**:
+  - Список заказов, фильтры (по статусу/паре/дате/сумме).
+  - Детали: возможные действия — Request KYC, Mark as Manual Payout, Send Crypto (старт процесса подписи/транзакции), Mark as Paid + attach payout tx_hash.
+  - Audit trail: кто и когда выполнил действие.
+- **KYC / AML**:
+  - Реализовать пороговые лимиты, sanctions screening (по спискам), velocity checks.
+  - Возможность запроса KYC при ручном триггере.
+- **Notifications**:
+  - Telegram bot: при создании order — полное сообщение с masked платежными данными и ссылкой в админку; при получении депозита — оповещение с tx, подтверждениями и кнопкой Quick-Payout/Manual.
+  - Email (опционально) — пользовательский трекинг.
+- **Security**:
+  - TLS/HSTS/CSP, input sanitization, rate limiting, IP-blocking, CAPTCHA на создание заказов при подозрении.
+  - Operator accounts protected by 2FA (TOTP).
+  - Private keys in HSM/Vault, hot wallet limits, cold storage for reserves.
+  - SAST/DAST + penetration testing before релизом.
+
+Технические рекомендации (stack):
+- Backend: Node.js + TypeScript (NestJS/Express), ethers.js / web3, bitcoin core RPC / electrumx
+- DB: PostgreSQL
+- Frontend: React + Vite + Tailwind
+- Docker Compose для локальной среды; Kubernetes / Docker Swarm для production
+- Secrets: HashiCorp Vault / AWS KMS
+- CI/CD: GitHub Actions / GitLab CI
+- Monitoring: Prometheus + Grafana + Sentry
+
+Deliverables по этапам (что нужно сдать, шаг за шагом):
+
+PHASE 0 — Research & Architecture (deliverables)
+- Окончательный список поддерживаемых монет/сетей, min/max лимиты, initial liquidity plan.
+- Архитектурная диаграмма (services, dataflow, key management).
+- Security & compliance checklist.
+Acceptance: утверждённый документ.
+
+PHASE 1 — MVP (ручные выплаты оператором)
+- Реализовать frontend виджет + страницу order status.
+- Backend: /api/orders/create, /api/orders/{id}, /api/webhook/node (stub), in-memory или Postgres storage.
+- Генерация mock deposit addresses (testnet flow), мониторинг входа (симуляция), Telegram-уведомления на создание заказа и при получении депозита.
+- Admin UI: список заказов, ручная кнопка «Mark as Paid» (оператор вводит tx_hash).
+Acceptance: E2E через testnet: создать заказ → "отправить" симулированный депозит → оператор получил уведомление в Telegram → оператор пометил заказ как выполненный и добавил payout tx_hash.
+
+PHASE 2 — Автоматизация и расширение
+- Подключение реальных нод / провайдеров, реальный генератор адресов (HD derivation).
+- Реализовать fixed/float engine (locking rate + ttl, slippage checks).
+- Автоматический payout для конфигурируемых условий.
+- Поддержка ERC20 / memo fields / token transfer parsing.
+- OpenAPI, unit/integration tests.
+
+PHASE 3 — Production и комплаенс
+- KYC/AML интеграции, sanctions screening, tokenized card payouts (провайдер).
+- HSM/Vault для ключей, multi-sig для крупных выплат.
+- Penetration testing, security audit, bug bounty.
+- Scalability, HA, backups, monitoring + runbooks.
+
+Acceptance criteria для каждого этапа — привести в формате чек-листов (см. Deliverables).
+
+Шаблон Telegram-уведомления (пример):
+- NEW ORDER
+  - Order: #{{order_id}}
+  - From: {{from_amount}} {{from_coin}} ({{from_network}})
+  - To: {{expected_receive}} {{to_coin}}
+  - Deposit: {{deposit_address}} {{deposit_memo?}}
+  - Payout target: {{masked_card_or_wallet}}
+  - Contact: {{email/telegram}}
+  - [Open order] [Mark manual payout] [Request KYC]
+
+Ограничения и правила безопасности:
+- Никогда не хранить PAN; при необходимости — хранить только token/PAN masked.
+- Для выплат на карту — использовать провайдера или manual operator workflow.
+- Всегда логировать операции и хранить immutable audit-trail.
+
+Ожидаемый формат результата от тебя (developer/ChatGPT):
+1) На выход: ZIP репозиторий с двумя сервисами (backend + frontend) + docker-compose + SQL миграции.
+2) OpenAPI spec + ER диаграмма + README с инструкцией развёртывания.
+3) Скрипты тестовой симуляции deposit (testnet) и шаблоны Telegram сообщений.
+
+Начни с шага PHASE 0: дай список поддерживаемых монет/сетей (предлагаю: BTC, ETH+ERC20, TRON/TRC20 USDT, BSC BEP20, USDC (ERC20), USDT (TRC20)), предложи min/max лимиты и initial liquidity/reserve для каждой пары. Также опиши требования к infra (ноды vs провайдеры) и security baseline.
+
+Действуй пошагово и выдавай артефакты по завершению каждого шага.
