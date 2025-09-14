@@ -283,34 +283,26 @@ export function ExchangeWidget() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto glassmorphism-enhanced card-modern animate-slide-up animate-glow">
+    <div className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-100 to-blue-100 bg-clip-text text-transparent text-center sm:text-left animate-float">{t('exchange.title')}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white text-center sm:text-left">{t('exchange.title')}</h2>
         <div className="flex space-x-2 justify-center sm:justify-end">
           <Button
             type="button"
-            variant={rateType === "fixed" ? "secondary" : "ghost"}
+            variant={rateType === "fixed" ? "default" : "outline"}
             size="sm"
             onClick={() => setRateType("fixed")}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-h-[44px] ${
-              rateType === "fixed" 
-                ? "bg-white/20 text-white" 
-                : "text-white/70 hover:bg-white/20"
-            }`}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             data-testid="button-fixed-rate"
           >
             {t('exchange.fixedRate')}
           </Button>
           <Button
             type="button"
-            variant={rateType === "float" ? "secondary" : "ghost"}
+            variant={rateType === "float" ? "default" : "outline"}
             size="sm"
             onClick={() => setRateType("float")}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-h-[44px] ${
-              rateType === "float" 
-                ? "bg-white/20 text-white" 
-                : "text-white/70 hover:bg-white/20"
-            }`}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             data-testid="button-float-rate"
           >
             {t('exchange.floatRate')}
@@ -322,7 +314,7 @@ export function ExchangeWidget() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           {/* Send Currency */}
           <div className="space-y-3">
-            <FormLabel className="text-white/80 text-sm font-medium">
+            <FormLabel className="text-slate-700 dark:text-slate-300 text-sm font-medium">
               {t('exchange.youSend')}
             </FormLabel>
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
@@ -335,7 +327,7 @@ export function ExchangeWidget() {
                       <Input
                         type="number"
                         placeholder="0.00"
-                        className="bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-white/30 h-12 sm:h-10 text-base sm:text-sm"
+                        className="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:ring-primary/30 h-12 sm:h-10 text-base sm:text-sm"
                         {...field}
                         data-testid="input-from-amount"
                       />
@@ -351,7 +343,7 @@ export function ExchangeWidget() {
                   <FormItem className="sm:min-w-[140px]">
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="w-full sm:min-w-[140px] bg-white/10 border border-white/20 text-white h-12 sm:h-10" data-testid="select-from-currency">
+                        <SelectTrigger className="w-full sm:min-w-[140px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white h-12 sm:h-10" data-testid="select-from-currency">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -369,7 +361,7 @@ export function ExchangeWidget() {
               />
             </div>
             {fromCurrency && (
-              <div className="text-xs text-white/60 px-1">
+              <div className="text-xs text-slate-500 dark:text-slate-400 px-1">
                 {t('exchange.min')}: {fromCurrency.minAmount} {fromCurrency.symbol} • {t('exchange.max')}: {fromCurrency.maxAmount} {fromCurrency.symbol}
               </div>
             )}
@@ -379,19 +371,19 @@ export function ExchangeWidget() {
           <div className="flex justify-center my-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={swapCurrencies}
-              className="p-3 sm:p-4 rounded-full bg-white/20 hover:bg-white/30 transition-all transform hover:scale-110 active:scale-95 min-h-[48px] min-w-[48px]"
+              className="p-3 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 transition-all min-h-[48px] min-w-[48px]"
               data-testid="button-swap-currencies"
             >
-              <ArrowUpDown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <ArrowUpDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </Button>
           </div>
 
           {/* Receive Currency */}
           <div className="space-y-3">
-            <FormLabel className="text-white/80 text-sm font-medium">
+            <FormLabel className="text-slate-700 dark:text-slate-300 text-sm font-medium">
               {t('exchange.youReceive')}
             </FormLabel>
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
@@ -401,7 +393,7 @@ export function ExchangeWidget() {
                   placeholder="0.00"
                   value={receiveAmount}
                   readOnly
-                  className="bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                  className="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                   data-testid="input-receive-amount"
                 />
               </div>
@@ -412,7 +404,7 @@ export function ExchangeWidget() {
                   <FormItem className="sm:min-w-[140px]">
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="w-full sm:min-w-[140px] bg-white/10 border border-white/20 text-white h-12 sm:h-10" data-testid="select-to-currency">
+                        <SelectTrigger className="w-full sm:min-w-[140px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white h-12 sm:h-10" data-testid="select-to-currency">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -432,25 +424,25 @@ export function ExchangeWidget() {
           </div>
 
           {/* Exchange Rate Info */}
-          <div className="bg-white/10 rounded-lg p-4 space-y-3">
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-slate-600">
             <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
-              <span className="text-sm text-white/80">{t('exchange.exchangeRate')}:</span>
-              <span className="text-sm text-white font-medium" data-testid="text-exchange-rate">
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('exchange.exchangeRate')}:</span>
+              <span className="text-sm text-slate-900 dark:text-white font-medium" data-testid="text-exchange-rate">
                 1 {fromCurrency?.symbol} = {exchangeRate.toFixed(2)} {toCurrency?.symbol}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
-              <span className="text-sm text-white/80">{t('exchange.platformFee')}:</span>
-              <span className="text-sm text-white">0.5%</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('exchange.platformFee')}:</span>
+              <span className="text-sm text-slate-900 dark:text-white">0.5%</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
-              <span className="text-sm text-white/80">{t('exchange.networkFee')}:</span>
-              <span className="text-sm text-white">~{form.watch("fromCurrency").includes("usdt") ? "2 USDT" : "0.0001 BTC"}</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('exchange.networkFee')}:</span>
+              <span className="text-sm text-slate-900 dark:text-white">~{form.watch("fromCurrency").includes("usdt") ? "2 USDT" : "0.0001 BTC"}</span>
             </div>
             {rateType === "fixed" && (
               <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
-                <span className="text-sm text-white/80">{t('exchange.rateLocked')}:</span>
-                <span className="text-sm text-white font-medium" data-testid="text-rate-lock-time">{formatTime(timeRemaining)}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{t('exchange.rateLocked')}:</span>
+                <span className="text-sm text-slate-900 dark:text-white font-medium" data-testid="text-rate-lock-time">{formatTime(timeRemaining)}</span>
               </div>
             )}
           </div>
@@ -458,10 +450,10 @@ export function ExchangeWidget() {
           {/* Card Details */}
           {/* Crypto Payout - Wallet Address */}
           {isCryptoPayout && (
-            <div className="space-y-4 bg-white/5 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-white/80 mb-3">
+            <div className="space-y-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="w-2 h-2 bg-green-400 rounded-full" />
-                <h3 className="text-white font-medium text-sm sm:text-base">{t('exchange.cryptoPayout')}</h3>
+                <h3 className="text-slate-900 dark:text-white font-medium text-sm sm:text-base">{t('exchange.cryptoPayout')}</h3>
               </div>
               <FormField
                 control={form.control}
@@ -471,7 +463,7 @@ export function ExchangeWidget() {
                     <FormControl>
                       <Input
                         placeholder={t('exchange.walletAddressPlaceholder')}
-                        className="bg-white/10 border border-white/20 text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                        className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                         {...field}
                         data-testid="input-wallet-address"
                       />
@@ -485,10 +477,10 @@ export function ExchangeWidget() {
           
           {/* Card Payout - Card Details */}
           {isCardPayout && (
-            <div className="space-y-4 bg-white/5 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-white/80 mb-3">
+            <div className="space-y-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <h3 className="text-white font-medium text-sm sm:text-base">{t('exchange.cardPayout')}</h3>
+                <h3 className="text-slate-900 dark:text-white font-medium text-sm sm:text-base">{t('exchange.cardPayout')}</h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
@@ -499,7 +491,7 @@ export function ExchangeWidget() {
                       <FormControl>
                         <Input
                           placeholder={t('exchange.cardNumber')}
-                          className="bg-white/10 border border-white/20 text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                          className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                           {...field}
                           data-testid="input-card-number"
                         />
@@ -516,7 +508,7 @@ export function ExchangeWidget() {
                       <FormControl>
                         <Input
                           placeholder={t('exchange.bankName')}
-                          className="bg-white/10 border border-white/20 text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                          className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                           {...field}
                           data-testid="input-bank-name"
                         />
@@ -533,7 +525,7 @@ export function ExchangeWidget() {
                       <FormControl>
                         <Input
                           placeholder={t('exchange.holderName')}
-                          className="bg-white/10 border border-white/20 text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                          className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                           {...field}
                           data-testid="input-holder-name"
                         />
@@ -556,7 +548,7 @@ export function ExchangeWidget() {
                   <Input
                     type="email"
                     placeholder={t('exchange.email')}
-                    className="bg-white/10 border border-white/20 text-white placeholder-white/50 h-12 sm:h-10 text-base sm:text-sm"
+                    className="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-400 h-12 sm:h-10 text-base sm:text-sm"
                     {...field}
                     data-testid="input-email"
                   />

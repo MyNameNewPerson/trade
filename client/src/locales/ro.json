@@ -20,6 +20,8 @@
   },
   "exchange": {
     "title": "Schimb",
+    "pageTitle": "Schimb de criptomonede",
+    "pageDescription": "Schimb rapid și sigur de criptomonede",
     "fixedRate": "Curs fix",
     "floatRate": "Curs flotant",
     "youSend": "Trimiteți",

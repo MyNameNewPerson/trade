@@ -1,34 +1,30 @@
 import { Header } from "@/components/header";
 import { ExchangeWidget } from "@/components/exchange-widget";
+import { useTranslation } from "react-i18next";
 
 export default function ExchangeOnly() {
+  const { t } = useTranslation();
+  
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Header />
       
-      {/* Enhanced Exchange Page with beautiful gradient */}
-      <main className="min-h-screen gradient-bg relative overflow-hidden">
-        {/* Floating decoration elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{animationDelay: '4s'}}></div>
-        
-        <div className="container mx-auto px-4 py-12 relative z-10">
-          {/* Hero Section */}
-          <div className="text-center mb-12 animate-fade-in">
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-purple-100 to-blue-100 bg-clip-text text-transparent mb-4 animate-slide-up">
-              Crypto Exchange
+      {/* Simple, clean exchange page */}
+      <main className="min-h-[calc(100vh-4rem)]">
+        <div className="container mx-auto px-4 py-8 sm:py-12">
+          {/* Simple, minimal header */}
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2" data-testid="text-exchange-title">
+              {t('exchange.pageTitle')}
             </h1>
-            <p className="text-xl text-white/80 max-w-2xl mx-auto animate-slide-up" style={{animationDelay: '0.2s'}}>
-              Fast, secure, and reliable cryptocurrency exchange with instant transactions
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl mx-auto" data-testid="text-exchange-description">
+              {t('exchange.pageDescription')}
             </p>
           </div>
           
-          {/* Centered Exchange Widget */}
-          <div className="flex justify-center items-center">
-            <div className="animate-slide-up" style={{animationDelay: '0.4s'}}>
-              <ExchangeWidget />
-            </div>
+          {/* Exchange Widget - Main Focus */}
+          <div className="flex justify-center">
+            <ExchangeWidget />
           </div>
         </div>
       </main>

@@ -18,30 +18,30 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-gradient-to-r from-purple-900/90 via-blue-900/90 to-purple-900/90 backdrop-blur-lg supports-[backdrop-filter]:bg-gradient-to-r glassmorphism-enhanced">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2" data-testid="link-home">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
               <span className="text-white font-bold text-sm">CF</span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold text-slate-900 dark:text-white">
               {t('header.title')}
             </span>
           </Link>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-6">
-            <Link href="/" className="text-white/90 hover:text-white transition-colors font-medium" data-testid="link-exchange">
+            <Link href="/" className="text-slate-900 dark:text-white hover:text-primary transition-colors font-medium" data-testid="link-exchange">
               {t('header.nav.exchange')}
             </Link>
-            <Link href="/rates" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-rates">
+            <Link href="/rates" className="text-slate-600 dark:text-slate-300 hover:text-primary transition-colors font-medium" data-testid="link-rates">
               {t('header.nav.rates')}
             </Link>
-            <Link href="/about" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-about">
+            <Link href="/about" className="text-slate-600 dark:text-slate-300 hover:text-primary transition-colors font-medium" data-testid="link-about">
               {t('header.nav.about')}
             </Link>
-            <Link href="/support" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-support">
+            <Link href="/support" className="text-slate-600 dark:text-slate-300 hover:text-primary transition-colors font-medium" data-testid="link-support">
               {t('header.nav.support')}
             </Link>
           </nav>
@@ -67,7 +67,7 @@ export function Header() {
                   <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
                     <span className="text-white font-bold text-xs">CF</span>
                   </div>
-                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  <span className="text-lg font-bold text-slate-900 dark:text-white">
                     {t('header.title')}
                   </span>
                 </SheetTitle>

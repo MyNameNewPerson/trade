@@ -20,6 +20,8 @@
   },
   "exchange": {
     "title": "Exchange",
+    "pageTitle": "Crypto Exchange",
+    "pageDescription": "Fast, secure cryptocurrency exchange",
     "fixedRate": "Fixed Rate",
     "floatRate": "Float Rate",
     "youSend": "You send",
