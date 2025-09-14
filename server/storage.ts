@@ -19,6 +19,7 @@ export interface IStorage {
   getOrder(id: string): Promise<Order | undefined>;
   updateOrderStatus(id: string, status: string, updates?: Partial<Order>): Promise<Order | undefined>;
   getOrders(): Promise<Order[]>;
+  getUserOrders(userId: string): Promise<Order[]>;
 
   // KYC operations
   createKycRequest(request: InsertKycRequest): Promise<KycRequest>;
@@ -321,6 +322,7 @@ export class MemStorage implements IStorage {
 
     const newOrder: Order = {
       id: orderId,
+      userId: orderRequest.userId || null,
       fromCurrency: orderRequest.fromCurrency,
       toCurrency: orderRequest.toCurrency,
       fromAmount: fromAmount.toString(),
@@ -380,6 +382,10 @@ export class MemStorage implements IStorage {
 
   async getOrders(): Promise<Order[]> {
     return Array.from(this.orders.values());
+  }
+
+  async getUserOrders(userId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(order => order.userId === userId);
   }
 
   async createKycRequest(request: InsertKycRequest): Promise<KycRequest> {
@@ -582,4 +588,266 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
+import { 
+  currencies, 
+  exchangeRates, 
+  orders, 
+  kycRequests, 
+  users, 
+  walletSettings, 
+  platformSettings 
+} from "@shared/schema";
+
+// Database Storage implementation - blueprint:javascript_database  
+export class DatabaseStorage implements IStorage {
+  // User operations - mandatory for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Additional user operations  
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return user;
+  }
+
+  // Currency operations
+  async getCurrencies(): Promise<Currency[]> {
+    return await db.select().from(currencies);
+  }
+
+  async getCurrency(id: string): Promise<Currency | undefined> {
+    const [currency] = await db.select().from(currencies).where(eq(currencies.id, id));
+    return currency;
+  }
+
+  async createCurrency(currency: InsertCurrency): Promise<Currency> {
+    const [newCurrency] = await db.insert(currencies).values(currency).returning();
+    return newCurrency;
+  }
+
+  // Exchange rate operations
+  async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate | undefined> {
+    const [rate] = await db.select().from(exchangeRates)
+      .where(sql`${exchangeRates.fromCurrency} = ${fromCurrency} AND ${exchangeRates.toCurrency} = ${toCurrency}`);
+    return rate;
+  }
+
+  async getLatestRates(): Promise<ExchangeRate[]> {
+    return await db.select().from(exchangeRates);
+  }
+
+  async createExchangeRate(rate: InsertExchangeRate): Promise<ExchangeRate> {
+    const [newRate] = await db.insert(exchangeRates).values(rate).returning();
+    return newRate;
+  }
+
+  // Order operations
+  async createOrder(orderRequest: CreateOrderRequest): Promise<Order> {
+    const orderId = 'CF-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+    
+    // Calculate amounts and fees
+    const fromAmount = parseFloat(orderRequest.fromAmount);
+    const platformFee = fromAmount * 0.005; // 0.5% fee
+    const networkFee = orderRequest.fromCurrency.includes('usdt') ? 2 : 0.0001;
+    
+    // Get real-time exchange rate
+    let exchangeRate: number;
+    try {
+      exchangeRate = await exchangeRateService.getRate(orderRequest.fromCurrency, orderRequest.toCurrency);
+    } catch (error) {
+      console.error('Failed to get real-time rate, using fallback:', error);
+      const rate = await this.getExchangeRate(orderRequest.fromCurrency, orderRequest.toCurrency);
+      exchangeRate = rate ? parseFloat(rate.rate) : 1;
+    }
+    
+    const effectiveAmount = fromAmount - platformFee - networkFee;
+    const toAmount = effectiveAmount * exchangeRate;
+
+    // Generate deposit address (mock)
+    const depositAddress = this.generateDepositAddress(orderRequest.fromCurrency);
+
+    // Mask card number if provided
+    let cardDetails = null;
+    if (orderRequest.cardDetails) {
+      cardDetails = {
+        ...orderRequest.cardDetails,
+        number: this.maskCardNumber(orderRequest.cardDetails.number)
+      };
+    }
+
+    const orderData = {
+      id: orderId,
+      userId: orderRequest.userId || null,
+      fromCurrency: orderRequest.fromCurrency,
+      toCurrency: orderRequest.toCurrency,
+      fromAmount: fromAmount.toString(),
+      toAmount: toAmount.toString(),
+      exchangeRate: exchangeRate.toString(),
+      rateType: orderRequest.rateType,
+      status: 'awaiting_deposit',
+      depositAddress,
+      recipientAddress: orderRequest.recipientAddress || null,
+      cardDetails,
+      contactEmail: orderRequest.contactEmail || null,
+      platformFee: platformFee.toString(),
+      networkFee: networkFee.toString(),
+      rateLockExpiry: orderRequest.rateType === 'fixed' ? 
+        new Date(Date.now() + 10 * 60 * 1000) : null, // 10 minutes lock
+      txHash: null,
+      payoutTxHash: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const [newOrder] = await db.insert(orders).values(orderData).returning();
+    
+    // Send Telegram notification
+    try {
+      if (telegramService.isConfigured()) {
+        await telegramService.sendOrderNotification(newOrder);
+        console.log(`Telegram notification sent for order ${orderId}`);
+      } else {
+        console.log('Telegram not configured, skipping notification');
+      }
+    } catch (error) {
+      console.error('Failed to send Telegram notification:', error);
+    }
+    
+    return newOrder;
+  }
+
+  async getOrder(id: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
+  }
+
+  async updateOrderStatus(id: string, status: string, updates?: Partial<Order>): Promise<Order | undefined> {
+    const updateData = {
+      status,
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    const [order] = await db.update(orders).set(updateData).where(eq(orders.id, id)).returning();
+    return order;
+  }
+
+  async getOrders(): Promise<Order[]> {
+    return await db.select().from(orders);
+  }
+
+  async getUserOrders(userId: string): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.userId, userId));
+  }
+
+  // KYC operations
+  async createKycRequest(request: InsertKycRequest): Promise<KycRequest> {
+    const [newRequest] = await db.insert(kycRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async getKycRequest(orderId: string): Promise<KycRequest | undefined> {
+    const [request] = await db.select().from(kycRequests).where(eq(kycRequests.orderId, orderId));
+    return request;
+  }
+
+  async updateKycRequest(id: string, updates: Partial<KycRequest>): Promise<KycRequest | undefined> {
+    const [request] = await db.update(kycRequests).set(updates).where(eq(kycRequests.id, id)).returning();
+    return request;
+  }
+
+  // Wallet settings operations
+  async getWalletSettings(): Promise<WalletSetting[]> {
+    return await db.select().from(walletSettings).where(eq(walletSettings.isActive, true));
+  }
+
+  async getWalletSetting(currency: string): Promise<WalletSetting | undefined> {
+    const [wallet] = await db.select().from(walletSettings)
+      .where(sql`${walletSettings.currency} = ${currency} AND ${walletSettings.isActive} = true`);
+    return wallet;
+  }
+
+  async createWalletSetting(wallet: InsertWalletSetting): Promise<WalletSetting> {
+    const [newWallet] = await db.insert(walletSettings).values(wallet).returning();
+    return newWallet;
+  }
+
+  async updateWalletSetting(id: string, updates: Partial<WalletSetting>): Promise<WalletSetting | undefined> {
+    const [wallet] = await db.update(walletSettings).set(updates).where(eq(walletSettings.id, id)).returning();
+    return wallet;
+  }
+
+  // Platform settings operations
+  async getPlatformSettings(): Promise<PlatformSetting[]> {
+    return await db.select().from(platformSettings);
+  }
+
+  async getPlatformSetting(key: string): Promise<PlatformSetting | undefined> {
+    const [setting] = await db.select().from(platformSettings).where(eq(platformSettings.key, key));
+    return setting;
+  }
+
+  async setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting> {
+    const [newSetting] = await db.insert(platformSettings).values(setting)
+      .onConflictDoUpdate({
+        target: platformSettings.key,
+        set: {
+          value: setting.value,
+          updatedAt: new Date(),
+        },
+      }).returning();
+    return newSetting;
+  }
+
+  private generateDepositAddress(currency: string): string {
+    // Mock address generation based on currency type
+    switch (currency) {
+      case 'btc':
+        return '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'; // Mock BTC address
+      case 'eth':
+      case 'usdt-erc20':
+      case 'usdc':
+        return '0x' + Math.random().toString(16).substring(2, 42).padStart(40, '0'); // Mock ETH address
+      case 'usdt-trc20':
+        return 'T' + Math.random().toString(36).substring(2, 35).toUpperCase(); // Mock TRON address
+      default:
+        return Math.random().toString(36).substring(2, 35);
+    }
+  }
+
+  private maskCardNumber(cardNumber: string): string {
+    const clean = cardNumber.replace(/\D/g, '');
+    return clean.slice(0, 4) + '****' + clean.slice(-4);
+  }
+}
+
+export const storage = new DatabaseStorage();

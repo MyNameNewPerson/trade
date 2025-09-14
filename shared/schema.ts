@@ -25,6 +25,7 @@ export const exchangeRates = pgTable("exchange_rates", {
 
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey(),
+  userId: varchar("user_id"),
   fromCurrency: text("from_currency").notNull(),
   toCurrency: text("to_currency").notNull(),
   fromAmount: decimal("from_amount", { precision: 18, scale: 8 }).notNull(),
@@ -139,6 +140,7 @@ export const createOrderSchema = z.object({
     holderName: z.string().min(1),
   }).optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
+  userId: z.string().optional(),
 });
 
 export type CreateOrderRequest = z.infer<typeof createOrderSchema>;

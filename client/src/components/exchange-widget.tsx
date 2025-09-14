@@ -13,6 +13,7 @@ import { ArrowUpDown, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useAuth } from "@/hooks/useAuth";
 import type { Currency, ExchangeRate } from "@shared/schema";
 
 const exchangeFormSchema = z.object({
@@ -70,6 +71,7 @@ type ExchangeFormData = z.infer<typeof exchangeFormSchema>;
 export function ExchangeWidget() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [rateType, setRateType] = useState<"fixed" | "float">("fixed");
   const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [receiveAmount, setReceiveAmount] = useState<string>("0");
@@ -112,6 +114,7 @@ export function ExchangeWidget() {
         fromAmount: data.fromAmount,
         rateType: data.rateType,
         contactEmail: data.contactEmail || undefined,
+        userId: user?.id,
       };
       
       // Add relevant fields based on payout type

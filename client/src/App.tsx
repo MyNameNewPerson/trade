@@ -29,27 +29,29 @@ function Router() {
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
           </div>
         </Route>
-      ) : !isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route path="/exchange" component={Home} />
-          <Route path="/order-status" component={OrderStatus} />
-          <Route path="/rates" component={Rates} />
-          <Route path="/support" component={Support} />
-          <Route path="/about" component={About} />
-          <Route path="/admin/login" component={AdminLoginPage} />
-          <Route component={NotFound} />
-        </>
       ) : (
         <>
-          <Route path="/" component={UserDashboard} />
-          <Route path="/dashboard" component={UserDashboard} />
+          {/* Main exchange page - always accessible */}
+          <Route path="/" component={Home} />
           <Route path="/exchange" component={Home} />
+          
+          {/* Public pages - accessible by everyone */}
           <Route path="/order-status" component={OrderStatus} />
           <Route path="/rates" component={Rates} />
           <Route path="/support" component={Support} />
           <Route path="/about" component={About} />
-          <Route path="/admin" component={AdminPanelPage} />
+          
+          {/* User dashboard - only for authenticated users */}
+          {isAuthenticated && (
+            <Route path="/dashboard" component={UserDashboard} />
+          )}
+          
+          {/* Admin pages */}
+          <Route path="/admin/login" component={AdminLoginPage} />
+          {isAuthenticated && (
+            <Route path="/admin" component={AdminPanelPage} />
+          )}
+          
           <Route component={NotFound} />
         </>
       )}

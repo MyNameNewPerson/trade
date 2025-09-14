@@ -199,6 +199,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user orders (authenticated user endpoint)
+  app.get('/api/orders/user', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      const orders = await storage.getUserOrders(user.id);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch user orders' });
+    }
+  });
+
   // Get all orders (admin endpoint)
   app.get('/api/admin/orders', isAuthenticated, requireAdmin, async (req, res) => {
     try {
