@@ -1,13 +1,19 @@
 import type { Express } from "express";
+import { authRouter } from './routes/auth';
+import { adminRouter } from './routes/admin';
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { createOrderSchema } from "@shared/schema";
 import { z } from "zod";
 import { security } from "./middleware/security";
+import { setupAuth, isAuthenticated, requireAdmin } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Setup Replit Auth
+  await setupAuth(app);
   
   // Apply security middleware
   app.use(security.corsHeaders);
@@ -70,6 +76,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, 30000);
 
   // API Routes
+  
+  // Authentication routes
+  app.use('/api/auth', authRouter);
+  
+  // Admin routes
+  app.use('/api/admin', adminRouter);
   
   // Get supported currencies
   app.get('/api/currencies', async (req, res) => {
@@ -154,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update order status (admin endpoint)
-  app.patch('/api/orders/:id/status', async (req, res) => {
+  app.patch('/api/orders/:id/status', isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { status, txHash, payoutTxHash } = req.body;
@@ -188,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all orders (admin endpoint)
-  app.get('/api/admin/orders', async (req, res) => {
+  app.get('/api/admin/orders', isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const orders = await storage.getOrders();
       res.json(orders);

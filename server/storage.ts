@@ -1,4 +1,4 @@
-import { type Currency, type ExchangeRate, type Order, type KycRequest, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type CreateOrderRequest } from "@shared/schema";
+import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type CreateOrderRequest } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { exchangeRateService } from "./services/exchange-api";
 import { telegramService } from "./services/telegram";
@@ -24,6 +24,23 @@ export interface IStorage {
   createKycRequest(request: InsertKycRequest): Promise<KycRequest>;
   getKycRequest(orderId: string): Promise<KycRequest | undefined>;
   updateKycRequest(id: string, updates: Partial<KycRequest>): Promise<KycRequest | undefined>;
+
+  // User operations
+  createUser(user: InsertUser): Promise<User>;
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Wallet settings operations
+  getWalletSettings(): Promise<WalletSetting[]>;
+  getWalletSetting(currency: string): Promise<WalletSetting | undefined>;
+  createWalletSetting(wallet: InsertWalletSetting): Promise<WalletSetting>;
+  updateWalletSetting(id: string, updates: Partial<WalletSetting>): Promise<WalletSetting | undefined>;
+  
+  // Platform settings operations
+  getPlatformSettings(): Promise<PlatformSetting[]>;
+  getPlatformSetting(key: string): Promise<PlatformSetting | undefined>;
+  setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting>;
 }
 
 export class MemStorage implements IStorage {
@@ -31,6 +48,9 @@ export class MemStorage implements IStorage {
   private exchangeRates: Map<string, ExchangeRate> = new Map();
   private orders: Map<string, Order> = new Map();
   private kycRequests: Map<string, KycRequest> = new Map();
+  private users: Map<string, User> = new Map();
+  private walletSettings: Map<string, WalletSetting> = new Map();
+  private platformSettings: Map<string, PlatformSetting> = new Map();
 
   constructor() {
     this.initializeData();
@@ -394,6 +414,150 @@ export class MemStorage implements IStorage {
 
     this.kycRequests.set(id, updatedRequest);
     return updatedRequest;
+  }
+
+  // User operations - mandatory for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    if (!userData.id) {
+      throw new Error('User ID is required for upsert operation');
+    }
+
+    const existing = this.users.get(userData.id);
+    
+    if (existing) {
+      // Update existing user
+      const updated: User = {
+        ...existing,
+        email: userData.email ?? existing.email,
+        firstName: userData.firstName ?? existing.firstName,
+        lastName: userData.lastName ?? existing.lastName,
+        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
+        updatedAt: new Date(),
+      };
+      this.users.set(userData.id, updated);
+      return updated;
+    } else {
+      // Create new user
+      const newUser: User = {
+        id: userData.id,
+        email: userData.email ?? null,
+        firstName: userData.firstName ?? null,
+        lastName: userData.lastName ?? null,
+        profileImageUrl: userData.profileImageUrl ?? null,
+        role: 'user',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.users.set(userData.id, newUser);
+      return newUser;
+    }
+  }
+
+  // Additional user operations  
+  async createUser(user: InsertUser): Promise<User> {
+    const newUser: User = {
+      id: randomUUID(),
+      email: user.email ?? null,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      profileImageUrl: user.profileImageUrl ?? null,
+      role: user.role || 'user',
+      isActive: user.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.users.set(newUser.id, newUser);
+    return newUser;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  // Wallet settings operations
+  async getWalletSettings(): Promise<WalletSetting[]> {
+    return Array.from(this.walletSettings.values()).filter(w => w.isActive);
+  }
+
+  async getWalletSetting(currency: string): Promise<WalletSetting | undefined> {
+    return Array.from(this.walletSettings.values()).find(w => w.currency === currency && w.isActive);
+  }
+
+  async createWalletSetting(wallet: InsertWalletSetting): Promise<WalletSetting> {
+    const newWallet: WalletSetting = {
+      id: randomUUID(),
+      currency: wallet.currency,
+      address: wallet.address,
+      network: wallet.network,
+      isActive: wallet.isActive ?? true,
+      createdAt: new Date(),
+      createdBy: wallet.createdBy
+    };
+    
+    this.walletSettings.set(newWallet.id, newWallet);
+    return newWallet;
+  }
+
+  async updateWalletSetting(id: string, updates: Partial<WalletSetting>): Promise<WalletSetting | undefined> {
+    const wallet = this.walletSettings.get(id);
+    if (!wallet) return undefined;
+
+    const updatedWallet = { ...wallet, ...updates };
+    this.walletSettings.set(id, updatedWallet);
+    return updatedWallet;
+  }
+
+  // Platform settings operations
+  async getPlatformSettings(): Promise<PlatformSetting[]> {
+    return Array.from(this.platformSettings.values());
+  }
+
+  async getPlatformSetting(key: string): Promise<PlatformSetting | undefined> {
+    return Array.from(this.platformSettings.values()).find(s => s.key === key);
+  }
+
+  async setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting> {
+    const existing = await this.getPlatformSetting(setting.key);
+    
+    if (existing) {
+      const updated: PlatformSetting = {
+        ...existing,
+        value: setting.value,
+        description: setting.description ?? existing.description,
+        isEncrypted: setting.isEncrypted ?? false,
+        updatedAt: new Date(),
+        updatedBy: setting.updatedBy
+      };
+      this.platformSettings.set(existing.id, updated);
+      return updated;
+    } else {
+      const newSetting: PlatformSetting = {
+        id: randomUUID(),
+        key: setting.key,
+        value: setting.value,
+        description: setting.description ?? null,
+        isEncrypted: setting.isEncrypted ?? false,
+        updatedAt: new Date(),
+        updatedBy: setting.updatedBy
+      };
+      this.platformSettings.set(newSetting.id, newSetting);
+      return newSetting;
+    }
   }
 
   private generateDepositAddress(currency: string): string {

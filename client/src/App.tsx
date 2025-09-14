@@ -6,22 +6,53 @@ import { ThemeProvider } from "./contexts/theme-context";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "./lib/i18n";
+import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import OrderStatus from "@/pages/order-status";
 import Rates from "@/pages/rates";
 import Support from "@/pages/support";
 import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
+import { AdminLoginPage } from "@/pages/admin-login";
+import { AdminPanelPage } from "@/pages/admin-panel";
+import Landing from "@/pages/landing";
+import UserDashboard from "@/pages/user-dashboard";
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/order-status" component={OrderStatus} />
-      <Route path="/rates" component={Rates} />
-      <Route path="/support" component={Support} />
-      <Route path="/about" component={About} />
-      <Route component={NotFound} />
+      {isLoading ? (
+        <Route>
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          </div>
+        </Route>
+      ) : !isAuthenticated ? (
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/exchange" component={Home} />
+          <Route path="/order-status" component={OrderStatus} />
+          <Route path="/rates" component={Rates} />
+          <Route path="/support" component={Support} />
+          <Route path="/about" component={About} />
+          <Route path="/admin/login" component={AdminLoginPage} />
+          <Route component={NotFound} />
+        </>
+      ) : (
+        <>
+          <Route path="/" component={UserDashboard} />
+          <Route path="/dashboard" component={UserDashboard} />
+          <Route path="/exchange" component={Home} />
+          <Route path="/order-status" component={OrderStatus} />
+          <Route path="/rates" component={Rates} />
+          <Route path="/support" component={Support} />
+          <Route path="/about" component={About} />
+          <Route path="/admin" component={AdminPanelPage} />
+          <Route component={NotFound} />
+        </>
+      )}
     </Switch>
   );
 }

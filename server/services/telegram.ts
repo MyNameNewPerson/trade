@@ -1,4 +1,5 @@
 import type { Order } from "@shared/schema";
+import { CryptoService } from './crypto';
 
 interface TelegramMessage {
   chat_id: string;
@@ -16,6 +17,7 @@ interface TelegramMessage {
 export class TelegramService {
   private botToken: string;
   private chatId: string;
+  private signingSecret: string;
   private configured: boolean;
   private rateLimiter: Map<string, number> = new Map();
   private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -24,7 +26,8 @@ export class TelegramService {
   constructor() {
     this.botToken = process.env.TELEGRAM_BOT_TOKEN || '';
     this.chatId = process.env.TELEGRAM_CHAT_ID || '';
-    this.configured = !!(this.botToken && this.chatId);
+    this.signingSecret = process.env.TELEGRAM_SIGNING_SECRET || '';
+    this.configured = !!(this.botToken && this.chatId && this.signingSecret);
     
     // Validate token format
     if (this.botToken && !this.isValidBotToken(this.botToken)) {
@@ -35,6 +38,12 @@ export class TelegramService {
     // Validate chat ID format
     if (this.chatId && !this.isValidChatId(this.chatId)) {
       console.error('Invalid Telegram chat ID format');
+      this.configured = false;
+    }
+    
+    // Validate signing secret
+    if (!this.signingSecret) {
+      console.error('TELEGRAM_SIGNING_SECRET is required for security');
       this.configured = false;
     }
   }
@@ -135,6 +144,7 @@ export class TelegramService {
   private formatOrderMessage(order: Order): string {
     const fromSymbol = order.fromCurrency.toUpperCase().replace('-', ' ');
     const toSymbol = order.toCurrency.replace('card-', '').toUpperCase();
+    const verifyCode = CryptoService.generateVerificationCode(6);
     
     let payoutDetails = '';
     if (order.cardDetails) {
@@ -174,23 +184,26 @@ export class TelegramService {
 ${payoutDetails}${contactInfo}
 
 <b>📅 Создан:</b> ${new Date(order.createdAt).toLocaleString('ru-RU')}
-<b>🔄 Статус:</b> ${this.getStatusEmoji(order.status)} ${this.getStatusText(order.status)}`;
+<b>🔄 Статус:</b> ${this.getStatusEmoji(order.status)} ${this.getStatusText(order.status)}
+
+<b>🔒 Код верификации:</b> <code>${verifyCode}</code>`;
   }
 
   private createOrderKeyboard(order: Order): Array<Array<{ text: string; callback_data?: string; url?: string }>> {
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
+    const verifyCode = CryptoService.generateVerificationCode(6);
     
     return [
       [
         { text: '👀 Просмотр заказа', url: `${baseUrl}/order-status?id=${order.id}` },
-        { text: '📋 Копировать адрес', callback_data: `copy_address_${order.id}` }
+        { text: '📋 Копировать адрес', callback_data: this.signCallbackData(`copy_address_${order.id}`) }
       ],
       [
-        { text: '✅ Отметить оплаченным', callback_data: `mark_paid_${order.id}` },
-        { text: '🔍 Запросить KYC', callback_data: `request_kyc_${order.id}` }
+        { text: '✅ Отметить оплаченным', callback_data: this.signCallbackData(`mark_paid_${order.id}`) },
+        { text: '🔍 Запросить KYC', callback_data: this.signCallbackData(`request_kyc_${order.id}`) }
       ],
       [
-        { text: '❌ Отменить заказ', callback_data: `cancel_order_${order.id}` }
+        { text: '❌ Отменить заказ', callback_data: this.signCallbackData(`cancel_order_${order.id}`) }
       ]
     ];
   }
@@ -251,12 +264,63 @@ ${payoutDetails}${contactInfo}
   }
 
   // Security method to get sanitized configuration status
-  getConfigStatus(): { configured: boolean; hasToken: boolean; hasChatId: boolean } {
+  getConfigStatus(): { configured: boolean; hasToken: boolean; hasChatId: boolean; hasSigningSecret: boolean } {
     return {
       configured: this.configured,
       hasToken: !!this.botToken,
-      hasChatId: !!this.chatId
+      hasChatId: !!this.chatId,
+      hasSigningSecret: !!this.signingSecret
     };
+  }
+
+  // Sign callback data for security
+  private signCallbackData(data: string): string {
+    const timestamp = Date.now().toString();
+    const payload = `${data}:${timestamp}`;
+    const signature = CryptoService.generateHMAC(payload, this.signingSecret);
+    return `${payload}:${signature.substring(0, 8)}`; // Short signature for Telegram limits
+  }
+
+  // Verify callback data signature
+  verifyCallbackData(callbackData: string): { valid: boolean; data?: string } {
+    try {
+      const parts = callbackData.split(':');
+      if (parts.length !== 3) return { valid: false };
+      
+      const [data, timestamp, shortSignature] = parts;
+      const payload = `${data}:${timestamp}`;
+      const expectedSignature = CryptoService.generateHMAC(payload, this.signingSecret);
+      
+      // Check if signature matches (first 8 characters)
+      if (expectedSignature.substring(0, 8) !== shortSignature) {
+        return { valid: false };
+      }
+      
+      // Check if timestamp is not too old (1 hour)
+      const age = Date.now() - parseInt(timestamp);
+      if (age > 60 * 60 * 1000) {
+        return { valid: false };
+      }
+      
+      return { valid: true, data };
+    } catch {
+      return { valid: false };
+    }
+  }
+
+  // Send deposit monitoring alert
+  async sendDepositAlert(currency: string, amount: string, txId: string, orderId?: string): Promise<boolean> {
+    const orderInfo = orderId ? `\n<b>Связан с заказом:</b> #${orderId}` : '';
+    
+    const message = `🟢 <b>ДЕПОЗИТ ОБНАРУЖЕН</b>
+
+<b>Монета:</b> ${currency.toUpperCase()}
+<b>Сумма:</b> ${amount}
+<b>TX ID:</b> <code>${txId}</code>${orderInfo}
+
+<b>Время:</b> ${new Date().toLocaleString('ru-RU')}`;
+    
+    return await this.sendMessage(message);
   }
 }
 
