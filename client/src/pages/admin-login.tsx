@@ -94,7 +94,7 @@ export function AdminLoginPage() {
                           {...field}
                           type="email"
                           placeholder="admin@example.com"
-                          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 h-12 sm:h-10 text-base sm:text-sm"
                           data-testid="input-email"
                         />
                       </FormControl>
@@ -114,7 +114,7 @@ export function AdminLoginPage() {
                           {...field}
                           type="password"
                           placeholder="••••••••"
-                          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 h-12 sm:h-10 text-base sm:text-sm"
                           data-testid="input-password"
                         />
                       </FormControl>
@@ -126,7 +126,7 @@ export function AdminLoginPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12 sm:h-10 text-base sm:text-sm"
                   data-testid="button-login"
                 >
                   {isLoading ? "Вход..." : "Войти"}

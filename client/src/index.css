@@ -1,8 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Font import removed - now loaded in HTML for better performance */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile-optimized typography and spacing utilities */
+@layer utilities {
+  /* Touch-friendly minimum sizes */
+  .min-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimized text sizes for mobile readability */
+  .text-mobile-xs { font-size: 0.875rem; line-height: 1.25rem; }
+  .text-mobile-sm { font-size: 1rem; line-height: 1.5rem; }
+  .text-mobile-base { font-size: 1.125rem; line-height: 1.75rem; }
+  .text-mobile-lg { font-size: 1.25rem; line-height: 1.75rem; }
+  
+  /* Mobile-first spacing utilities */
+  .mobile-spacing-tight { @apply space-y-2 sm:space-y-3; }
+  .mobile-spacing-normal { @apply space-y-3 sm:space-y-4; }
+  .mobile-spacing-loose { @apply space-y-4 sm:space-y-6; }
+  
+  /* Container utilities for mobile */
+  .mobile-container { @apply px-4 sm:px-6 lg:px-8; }
+  .mobile-section { @apply py-6 sm:py-8 lg:py-12; }
+  
+  /* Responsive grid utilities */
+  .mobile-grid-1-2 { @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4; }
+  .mobile-grid-1-3 { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4; }
+}
 
 :root {
   --background: hsl(210, 40%, 98%);
@@ -37,9 +65,9 @@
   --sidebar-accent-foreground: hsl(222.2, 84%, 4.9%);
   --sidebar-border: hsl(214.3, 31.8%, 91.4%);
   --sidebar-ring: hsl(221.2, 83.2%, 53.3%);
-  --font-sans: Inter, system-ui, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --radius: 0.75rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(221.2, 83.2%, 53.3%, 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(221.2, 83.2%, 53.3%, 0.00);

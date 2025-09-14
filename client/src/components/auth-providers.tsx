@@ -37,15 +37,21 @@ export function AuthProviders({
         const response = await fetch('/api/auth/providers');
         if (response.ok) {
           const data = await response.json();
-          setAvailableProviders(data.providers || ['replit']);
+          // Prioritize Google OAuth and include available providers
+          const providers = data.providers || ['google', 'replit'];
+          // Always put Google first if available
+          const sortedProviders = providers.includes('google') 
+            ? ['google', ...providers.filter(p => p !== 'google')]
+            : providers;
+          setAvailableProviders(sortedProviders);
         } else {
-          // Fallback to Replit only if API fails
-          setAvailableProviders(['replit']);
+          // Default to Google OAuth as primary
+          setAvailableProviders(['google', 'replit']);
         }
       } catch (error) {
         console.error('Error fetching auth providers:', error);
-        // Fallback to Replit only
-        setAvailableProviders(['replit']);
+        // Default to Google OAuth as primary
+        setAvailableProviders(['google', 'replit']);
       } finally {
         setIsLoading(false);
       }
@@ -68,7 +74,7 @@ export function AuthProviders({
       name: 'Google',
       icon: <SiGoogle className="w-5 h-5" />,
       url: '/api/auth/google',
-      color: 'bg-red-600 hover:bg-red-700'
+      color: 'bg-blue-600 hover:bg-blue-700'
     },
     github: {
       id: 'github',
@@ -101,21 +107,31 @@ export function AuthProviders({
     );
   }
 
-  // If there's only one provider (usually Replit), show a simpler UI
+  // If there's only one provider, show a simpler UI
   if (providers.length === 1) {
     const provider = providers[0];
+    const isGoogleProvider = provider.id === 'google';
     return (
       <div className={className}>
         <Button 
           size={buttonSize}
           onClick={() => window.location.href = provider.url}
-          className={`w-full ${provider.color || 'bg-primary hover:bg-primary/90'}`}
+          className={`w-full ${provider.color || 'bg-primary hover:bg-primary/90'} ${
+            isGoogleProvider ? 'font-semibold' : ''
+          }`}
           data-testid={`button-login-${provider.id}`}
         >
           {provider.icon}
-          <span className="ml-2">Continue with {provider.name}</span>
+          <span className="ml-2">
+            {isGoogleProvider ? 'Sign in with Google' : `Continue with ${provider.name}`}
+          </span>
           <LogIn className="w-4 h-4 ml-2" />
         </Button>
+        {isGoogleProvider && (
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Secure authentication with your Google account
+          </p>
+        )}
       </div>
     );
   }

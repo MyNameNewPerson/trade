@@ -72,3 +72,117 @@ The system uses PostgreSQL with the following main entities:
 - **Vite**: Build tool and development server
 
 The architecture is designed to be modular and scalable, with clear separation between the exchange widget, order management, and administrative functions. The system supports both automated and manual processing workflows, making it suitable for regulated cryptocurrency exchange operations.
+
+# Google OAuth Setup Instructions
+
+## ✅ Current Status
+**EXCELLENT NEWS:** Google OAuth is already **FULLY IMPLEMENTED** in the codebase! The only missing piece is the environment variables.
+
+**What's already working:**
+- ✅ Google OAuth Strategy configured in `server/oauthProviders.ts`
+- ✅ Endpoints `/api/auth/google` and `/api/auth/google/callback` created
+- ✅ CSRF protection enabled
+- ✅ User session integration working
+- ✅ Error handling implemented
+- ✅ Integration with Express server complete
+
+**What needs to be added:** Only `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables.
+
+## 🔧 Setup Instructions
+
+### Step 1: Get Google OAuth Credentials
+
+1. **Go to Google Cloud Console:**
+   - Visit: https://console.cloud.google.com/
+   - Create a new project or select existing one
+
+2. **Enable Google+ API:**
+   - Navigate to: APIs & Services → Library
+   - Search for "Google+ API" and enable it
+
+3. **Configure OAuth Consent Screen:**
+   - Go to: APIs & Services → OAuth consent screen
+   - Choose "External" user type
+   - Fill required fields:
+     - App name: "CryptoFlow Exchange"
+     - User support email: your email
+     - Developer contact information: your email
+
+4. **Create OAuth Client ID:**
+   - Go to: APIs & Services → Credentials
+   - Click "Create Credentials" → "OAuth client ID"
+   - Application type: "Web application"
+   - Name: "CryptoFlow Exchange App"
+   - Authorized JavaScript origins: `https://your-replit-domain.replit.dev`
+   - Authorized redirect URIs: `https://your-replit-domain.replit.dev/api/auth/google/callback`
+
+5. **Get your credentials:**
+   - Copy the "Client ID" 
+   - Copy the "Client Secret"
+
+### Step 2: Add Credentials to Replit
+
+1. **Open Replit Secrets:**
+   - In your Replit project, click on "Tools" → "Secrets"
+
+2. **Add Google OAuth credentials:**
+   ```
+   Key: GOOGLE_CLIENT_ID
+   Value: [Your Google Client ID from step 1]
+
+   Key: GOOGLE_CLIENT_SECRET  
+   Value: [Your Google Client Secret from step 1]
+   ```
+
+### Step 3: Restart Application
+
+1. **Restart the workflow:**
+   - The application will automatically restart
+   - Check logs for: "✅ Google OAuth configured successfully"
+
+2. **Verify it's working:**
+   - Visit: `https://your-replit-domain.replit.dev/api/auth/providers`
+   - Should show: `{"providers":["replit","google"],"configured":1,...}`
+
+### Step 4: Test Google OAuth
+
+1. **Test the login flow:**
+   - Go to your application
+   - Click "Sign in with Google" button
+   - Should redirect to Google OAuth
+   - After authorization, should redirect back to your app
+
+## 🔍 Troubleshooting
+
+### Issue: "Google OAuth not configured" in logs
+**Solution:** Check that `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are properly set in Replit Secrets.
+
+### Issue: "redirect_uri_mismatch" error
+**Solution:** Ensure the redirect URI in Google Cloud Console exactly matches: `https://your-replit-domain.replit.dev/api/auth/google/callback`
+
+### Issue: "csrf_failed" error  
+**Solution:** This is normal CSRF protection. Ensure you're accessing `/api/auth/google` directly, not `/api/auth/google/callback`.
+
+## 📝 Code Implementation Details
+
+The Google OAuth implementation includes:
+
+**Security Features:**
+- CSRF state parameter protection
+- Secure session handling
+- Access token and refresh token management
+- User profile integration with existing user system
+
+**User Flow:**
+1. User clicks "Sign in with Google"
+2. Redirects to Google OAuth with CSRF state
+3. User authorizes application
+4. Google redirects to `/api/auth/google/callback`
+5. Backend validates CSRF state and processes tokens
+6. User session created with Replit Auth compatibility
+7. User redirected to application homepage
+
+**Database Integration:**
+- Automatically creates/updates user in database
+- Uses format: `google_{google_user_id}` for unique user identification
+- Stores profile information (name, email, profile image)

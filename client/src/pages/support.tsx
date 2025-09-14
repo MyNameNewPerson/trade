@@ -144,29 +144,47 @@ export default function Support() {
                   {t('support.form.title')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
+              <CardContent className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">{t('support.form.name')}</label>
-                    <Input placeholder={t('support.form.namePlaceholder')} />
+                    <Input 
+                      placeholder={t('support.form.namePlaceholder')} 
+                      className="h-12 sm:h-10 text-base sm:text-sm"
+                      data-testid="input-support-name"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">{t('support.form.email')}</label>
-                    <Input type="email" placeholder={t('support.form.emailPlaceholder')} />
+                    <Input 
+                      type="email" 
+                      placeholder={t('support.form.emailPlaceholder')} 
+                      className="h-12 sm:h-10 text-base sm:text-sm"
+                      data-testid="input-support-email"
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">{t('support.form.subject')}</label>
-                  <Input placeholder={t('support.form.subjectPlaceholder')} />
+                  <Input 
+                    placeholder={t('support.form.subjectPlaceholder')} 
+                    className="h-12 sm:h-10 text-base sm:text-sm"
+                    data-testid="input-support-subject"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">{t('support.form.message')}</label>
                   <Textarea 
                     placeholder={t('support.form.messagePlaceholder')} 
                     rows={5}
+                    className="min-h-[120px] text-base sm:text-sm"
+                    data-testid="textarea-support-message"
                   />
                 </div>
-                <Button className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
+                <Button 
+                  className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 h-12 sm:h-10 text-base sm:text-sm"
+                  data-testid="button-support-send"
+                >
                   {t('support.form.send')}
                 </Button>
               </CardContent>
