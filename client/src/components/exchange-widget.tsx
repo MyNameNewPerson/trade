@@ -28,6 +28,41 @@ const exchangeFormSchema = z.object({
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
   }),
+}).superRefine((data, ctx) => {
+  // Validate crypto payout requirements
+  if (!data.toCurrency.startsWith("card-")) {
+    if (!data.recipientAddress || data.recipientAddress.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Wallet address is required for crypto payouts",
+        path: ["recipientAddress"]
+      });
+    }
+  }
+  // Validate card payout requirements
+  if (data.toCurrency.startsWith("card-")) {
+    if (!data.cardNumber || data.cardNumber.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Card number is required for card payouts",
+        path: ["cardNumber"]
+      });
+    }
+    if (!data.bankName || data.bankName.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bank name is required for card payouts",
+        path: ["bankName"]
+      });
+    }
+    if (!data.holderName || data.holderName.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Card holder name is required for card payouts",
+        path: ["holderName"]
+      });
+    }
+  }
 });
 
 type ExchangeFormData = z.infer<typeof exchangeFormSchema>;
@@ -69,19 +104,26 @@ export function ExchangeWidget() {
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: ExchangeFormData) => {
-      const orderData = {
+      const isCardPayout = data.toCurrency.startsWith("card-");
+      
+      const orderData: any = {
         fromCurrency: data.fromCurrency,
         toCurrency: data.toCurrency,
         fromAmount: data.fromAmount,
         rateType: data.rateType,
-        recipientAddress: data.recipientAddress,
-        cardDetails: data.cardNumber ? {
-          number: data.cardNumber,
+        contactEmail: data.contactEmail || undefined,
+      };
+      
+      // Add relevant fields based on payout type
+      if (isCardPayout) {
+        orderData.cardDetails = {
+          number: data.cardNumber || "",
           bankName: data.bankName || "",
           holderName: data.holderName || "",
-        } : undefined,
-        contactEmail: data.contactEmail,
-      };
+        };
+      } else {
+        orderData.recipientAddress = data.recipientAddress || "";
+      }
 
       const response = await apiRequest("POST", "/api/orders", orderData);
       return response.json();
@@ -176,9 +218,11 @@ export function ExchangeWidget() {
     form.setValue("fromAmount", "");
   };
 
-  const isCardPayout = form.watch("toCurrency").startsWith("card-");
+  const toCurrencyValue = form.watch("toCurrency");
+  const isCardPayout = toCurrencyValue.startsWith("card-");
+  const isCryptoPayout = !toCurrencyValue.startsWith("card-") && currencies.find(c => c.id === toCurrencyValue)?.type === 'crypto';
   const fromCurrency = currencies.find(c => c.id === form.watch("fromCurrency"));
-  const toCurrency = currencies.find(c => c.id === form.watch("toCurrency"));
+  const toCurrency = currencies.find(c => c.id === toCurrencyValue);
 
   const onSubmit = (data: ExchangeFormData) => {
     createOrderMutation.mutate(data);
@@ -358,9 +402,40 @@ export function ExchangeWidget() {
           </div>
 
           {/* Card Details */}
+          {/* Crypto Payout - Wallet Address */}
+          {isCryptoPayout && (
+            <div className="space-y-4 bg-white/5 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-white/80 mb-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full" />
+                <h3 className="text-white font-medium">{t('exchange.cryptoPayout')}</h3>
+              </div>
+              <FormField
+                control={form.control}
+                name="recipientAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        placeholder={t('exchange.walletAddressPlaceholder')}
+                        className="bg-white/10 border border-white/20 text-white placeholder-white/50"
+                        {...field}
+                        data-testid="input-wallet-address"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+          
+          {/* Card Payout - Card Details */}
           {isCardPayout && (
             <div className="space-y-4 bg-white/5 rounded-lg p-4">
-              <h3 className="text-white font-medium">{t('exchange.cardDetails')}</h3>
+              <div className="flex items-center gap-2 text-white/80 mb-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                <h3 className="text-white font-medium">{t('exchange.cardPayout')}</h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

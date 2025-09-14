@@ -23,15 +23,15 @@ export function Header() {
             <Link href="/" className="text-foreground hover:text-primary transition-colors" data-testid="link-exchange">
               {t('header.nav.exchange')}
             </Link>
-            <a href="#rates" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-rates">
+            <Link href="/rates" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-rates">
               {t('header.nav.rates')}
-            </a>
-            <a href="#about" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-about">
+            </Link>
+            <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-about">
               {t('header.nav.about')}
-            </a>
-            <a href="#support" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-support">
+            </Link>
+            <Link href="/support" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-support">
               {t('header.nav.support')}
-            </a>
+            </Link>
           </nav>
         </div>
         <div className="flex items-center space-x-4">

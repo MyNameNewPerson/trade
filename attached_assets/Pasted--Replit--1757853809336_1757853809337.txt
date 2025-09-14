@@ -1,0 +1,302 @@
+Предварительные требования (что подготовить перед началом)
+
+Аккаунт Replit с доступом к проекту (или форк твоего Replit-проекта). ✅ Проверить: есть доступ и можно запускать контейнер.
+
+Node.js (версия 18+), npm/yarn доступны в Replit контейнере. ✅ Проверить: node -v.
+
+Аккаунт Supabase (или любой PostgreSQL) для продакшн БД. Для быстрого локального старта можно использовать SQLite (Prisma + SQLite).
+
+Аккаунты/ключи поставщиков (для интеграций):
+
+Infura/Alchemy (ETH/USDT и др.) — опционально для MVP можно использовать тестовые провайдеры
+
+BTC node / Electrum server / провайдер API для BTC
+
+SendGrid (email), Twilio (SMS) — опционально
+
+Storage (Supabase storage / AWS S3) для KYC-файлов
+
+Шаг 0 — Организация репозитория и окружения в Replit
+
+В Replit: Fork/Создать новый реплит на базе Node.js (или импортировать существующий репозиторий).
+
+Создать ветку mvp/setup и работать в ней.
+
+В Replit -> Secrets/Environment variables: добавь все будущие переменные окружения (можно временно проставить заглушки).
+
+✅ Проверить: переменные видны в Replit Secrets.
+
+Добавь .gitignore (node_modules, .env, .next, .prisma/client)
+
+Шаг 1 — Инициализация проекта (Next.js + TypeScript + Tailwind)
+
+(Если у тебя уже есть фронтенд — адаптируй шаги и пропусти инициализацию, но проверь структуру файлов)
+
+В корне репозитория выполнить (в Replit shell):
+
+npx create-next-app@latest . --ts --use-npm --app
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+Настрой Tailwind (в tailwind.config.js) для работы с app/ или pages/.
+
+Создай базовую структуру директорий:
+
+/pages or /app
+/components
+/lib
+/pages/api or /app/api
+/prisma
+/scripts
+/public
+
+✅ Проверить: npm run dev запускает приложение и открывается страница по URL Replit.
+
+Шаг 2 — Подключение БД и Prisma (схема + миграция)
+
+Вариант A — Быстрый старт (SQLite): для локального тестирования
+
+Установи Prisma:
+
+npm install prisma --save-dev
+npm install @prisma/client
+npx prisma init --datasource-provider sqlite
+
+В prisma/schema.prisma вставь (минимум):
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  isVerified Boolean @default(false)
+  kycStatus String   @default("none")
+  createdAt DateTime @default(now())
+}
+
+
+model Rate {
+  id        Int      @id @default(autoincrement())
+  from      String
+  to        String
+  rate      Float
+  feePct    Float
+  minAmount Float
+  maxAmount Float
+  updatedAt DateTime @updatedAt
+}
+
+
+model ExchangeOrder {
+  id                  String   @id @default(uuid())
+  publicId            String   @unique
+  userId              String?
+  fromCurrency        String
+  toCurrency          String
+  amountFrom          Float
+  amountTo            Float
+  rateAtCreation      Float
+  fee                 Float
+  status              String
+  depositAddress      String?
+  txHash              String?
+  requiredConfirmations Int  @default(3)
+  confirmedCount      Int      @default(0)
+  payoutDetails       Json?
+  createdAt           DateTime @default(now())
+}
+
+Выполни миграцию (для SQLite она создаст dev.db):
+
+npx prisma migrate dev --name init
+
+✅ Проверить: npx prisma studio открывает GUI и показывает таблицы.
+
+Вариант B — Supabase/Postgres (production-ready):
+
+Создай проект Supabase, скопируй DATABASE_URL в Secrets проекта Replit.
+
+В prisma/schema.prisma поменяй datasource на provider = "postgresql" с env("DATABASE_URL").
+
+Запусти npx prisma migrate deploy (или dev при локальной разработке).
+
+✅ Проверить: подключение к базе успешно, таблицы созданы.
+
+Шаг 3 — Настройки .env.example (обязательные переменные)
+
+Создай файл .env.example со следующим содержимым (заполни реальные значения в Replit Secrets):
+
+# БД
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+
+
+# JWT / Auth
+JWT_SECRET=change-me-to-a-long-random-string
+NEXTAUTH_URL=https://your-replit-url.repl.co
+
+
+# Blockchain providers
+INFURA_PROJECT_ID=
+ALCHEMY_API_KEY=
+BTC_RPC_URL=
+
+
+# Email/SMS
+SENDGRID_API_KEY=
+TWILIO_SID=
+TWILIO_AUTH_TOKEN=
+
+
+# Storage (Supabase/AWS)
+STORAGE_URL=
+STORAGE_KEY=
+
+
+# App
+ADMIN_EMAILS=admin@example.com
+
+✅ Проверить: все ключи добавлены в Replit Secrets (не коммитить .env в Git).
+
+Шаг 4 — Аутентификация (быстрый, рабочий вариант)
+
+Рекомендую использовать NextAuth (для Next.js) с провайдером Credentials + Email verification.
+
+Установи пакеты:
+
+npm install next-auth @next-auth/prisma-adapter bcrypt
+
+Настрой pages/api/auth/[...nextauth].ts (или app/api/auth/...) c Prisma adapter и Credentials provider. Обязательно хранить JWT_SECRET.
+
+Реализуй регистрацию: хэшируй пароль через bcrypt/argon2 и сохраняй в таблицу User.
+
+✅ Проверить: регистрация / логин / защита маршрутов работают (попробуй curl запрос к защищённой API ручке).
+
+Шаг 5 — API: создание заявки /api/exchange/create
+
+Цель: при POST создать запись в ExchangeOrder, проверить лимиты и резерв, вернуть order_id и deposit_address.
+
+Создай файл pages/api/exchange/create.ts (или app/api/exchange/create/route.ts) со следующей логикой (псевдокод):
+
+// validate body: fromCurrency, toCurrency, amount
+// find rate and check min/max
+// check service reserve (rate table или отдельная таблица резервов)
+// generate publicId (например WX- timestamp + random)
+// ask wallet-service за deposit address (в MVP — сгенерировать тестовый адрес типа "test-addr-<publicId>")
+// create ExchangeOrder with status 'waiting_for_deposit'
+// return { publicId, depositAddress, amountToSend, requiredConfirmations }
+
+Реализуй idempotency (если приходит повторный запрос с одинаковым корпусом — не создавай дубли).
+
+✅ Проверить: POST /api/exchange/create возвращает JSON с publicId и depositAddress.
+
+Пример ответа:
+
+{
+  "publicId": "WX-20250914-abc123",
+  "depositAddress": "test-addr-WX-20250914-abc123",
+  "amountToSend": 0.12345,
+  "requiredConfirmations": 3
+}
+Шаг 6 — Webhook для нотификаций о транзакциях /api/webhook/blockchain
+
+Цель: обновлять confirmedCount и переводить заявку в processing при достижении requiredConfirmations.
+
+Реализуй endpoint POST /api/webhook/blockchain/:coin который принимает { txHash, address, confirmations } от провайдера.
+
+Логика:
+
+Найти ExchangeOrder по depositAddress или txHash.
+
+Если txHash новый — сохранить и обновить confirmedCount.
+
+Если confirmedCount >= requiredConfirmations и статус waiting_for_deposit/confirming — сменить статус на processing и поставить задачу в очередь выплат.
+
+Обязательно: сделать idempotent обработчик (проверять существующий txHash + signature webhook).
+
+✅ Проверить: симулировать POST с txHash и confirmations, наблюдать за сменой статуса в БД.
+
+Шаг 7 — Простая интеграция с кошельком / mock wallet (MVP)
+
+Для MVP можно сделать mock-wallet — сервис, который генерирует depositAddress и через скрипт симулирует webhook-пуши. Позже заменить на реальный провайдер.
+
+Реализуй lib/wallet.ts с функциями:
+
+generateDepositAddress(currency): string — возвращает test-<currency>-<random>;
+
+simulateIncomingTx(publicId, amount, confirmations) — вспомогательная функция для тестирования, которая создаёт запись txHash и вызывает POST /api/webhook/....
+
+✅ Проверить: при создании заявки depositAddress выглядит корректно, и simulateIncomingTx переводит заявку в processing.
+
+Шаг 8 — Frontend: виджет обмена и страница статуса
+
+Создай компонент components/ExchangeWidget.tsx:
+
+input: "Отдаёте" (число), селект "Валюта от" / "Валюта до";
+
+при вводе вызывает GET /api/rates?from=X&to=Y (debounce 300ms) и пересчитывает Получаете;
+
+кнопка "Обменять" вызывает POST /api/exchange/create.
+
+После создания заявки открывать страницу /exchange/[publicId], где показывать:
+
+depositAddress (кнопка копировать), QR-код (генератор QR в компоненте), количество подтверждений, статус.
+
+Валидаторы адресов: добавь минимальную проверку формата (regex) для основных валют — BTC/ETH.
+
+✅ Проверить:
+
+корректно считаются суммы при вводе;
+
+при создании заявки ты видишь depositAddress и publicId;
+
+QR-код генерируется.
+
+Шаг 9 — Кабинет пользователя и KYC
+
+Страница /account:
+
+список ExchangeOrder текущего пользователя (запрос GET /api/user/exchanges);
+
+статус KYC, кнопка "Загрузить документы".
+
+API для загрузки файлов: POST /api/user/kyc/upload — сохраняет файл в Supabase storage / S3 и создаёт запись в kyc_documents.
+
+Админ видит список KYC и может менять статус (uploaded → in_review → approved / rejected).
+
+✅ Проверить: загрузка файла создаёт запись в таблице kyc_documents и файл доступен в storage (проверь URL).
+
+Шаг 10 — Админ-панель (простейшая)
+
+Закрытый маршрут /admin (только для ADMIN_EMAILS или ролей, проверяемых на бэке).
+
+Функции:
+
+изменить курс (PUT /api/admin/rates);
+
+смотреть все заявки, менять статус вручную;
+
+просматривать KYC и ставить отметки.
+
+✅ Проверить: смена курса через админ-панель отражается в ответе GET /api/rates.
+
+Шаг 11 — Безопасность (обязательно, пункты не игнорировать)
+
+Пароли хэшировать через bcrypt/argon2.
+
+Вся критичная логика (изменение статуса заявки, выплата) — через проверку ролей и серверные проверки.
+
+Версионирование webhook secret: подпись webhook и проверка сигнатуры.
+
+Не хранить приватные ключи в репо; хранить в секретах / HSM / vault.
+
+CSP, Helmet, CSRF protection (для форм).
