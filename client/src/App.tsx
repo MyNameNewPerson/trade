@@ -8,9 +8,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "./lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
-import Home from "@/pages/home"; // Keep Home eager-loaded as main landing page
+import ExchangeOnly from "@/pages/exchange-only"; // Main exchange page - clean widget only
 
 // Lazy load non-critical pages for better performance
+const Home = lazy(() => import("@/pages/home"));
 const OrderStatus = lazy(() => import("@/pages/order-status"));
 const Rates = lazy(() => import("@/pages/rates"));
 const Support = lazy(() => import("@/pages/support"));
@@ -39,9 +40,13 @@ function Router() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
-        {/* Main exchange page - always accessible (eager loaded) */}
-        <Route path="/" component={Home} />
-        <Route path="/exchange" component={Home} />
+        {/* Main exchange page - clean widget only (eager loaded) */}
+        <Route path="/" component={ExchangeOnly} />
+        <Route path="/exchange" component={ExchangeOnly} />
+        
+        {/* Full landing page with features (lazy loaded) */}
+        <Route path="/home" component={Home} />
+        <Route path="/landing" component={Landing} />
         
         {/* Public pages - accessible by everyone (lazy loaded) */}
         <Route path="/order-status" component={OrderStatus} />
