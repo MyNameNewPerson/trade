@@ -18,7 +18,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-gradient-to-r from-purple-900/90 via-blue-900/90 to-purple-900/90 backdrop-blur-lg supports-[backdrop-filter]:bg-gradient-to-r glassmorphism-enhanced">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2" data-testid="link-home">
@@ -32,16 +32,16 @@ export function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-6">
-            <Link href="/" className="text-foreground hover:text-primary transition-colors" data-testid="link-exchange">
+            <Link href="/" className="text-white/90 hover:text-white transition-colors font-medium" data-testid="link-exchange">
               {t('header.nav.exchange')}
             </Link>
-            <Link href="/rates" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-rates">
+            <Link href="/rates" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-rates">
               {t('header.nav.rates')}
             </Link>
-            <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-about">
+            <Link href="/about" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-about">
               {t('header.nav.about')}
             </Link>
-            <Link href="/support" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-support">
+            <Link href="/support" className="text-white/70 hover:text-white transition-colors font-medium" data-testid="link-support">
               {t('header.nav.support')}
             </Link>
           </nav>

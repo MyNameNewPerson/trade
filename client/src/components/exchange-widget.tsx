@@ -283,9 +283,9 @@ export function ExchangeWidget() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto glassmorphism rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl animate-slide-up">
+    <div className="w-full max-w-2xl mx-auto glassmorphism-enhanced card-modern animate-slide-up animate-glow">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-white text-center sm:text-left">{t('exchange.title')}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-100 to-blue-100 bg-clip-text text-transparent text-center sm:text-left animate-float">{t('exchange.title')}</h2>
         <div className="flex space-x-2 justify-center sm:justify-end">
           <Button
             type="button"
@@ -593,7 +593,7 @@ export function ExchangeWidget() {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full bg-white text-primary font-semibold py-4 sm:py-4 rounded-lg hover:bg-white/90 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 text-base sm:text-sm min-h-[48px]"
+            className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 text-white font-bold py-4 sm:py-4 rounded-lg btn-modern animate-glow hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 text-base sm:text-sm min-h-[48px] shadow-lg border border-white/20"
             disabled={createOrderMutation.isPending}
             data-testid="button-create-order"
           >

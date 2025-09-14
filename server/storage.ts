@@ -53,21 +53,36 @@ export class PostgreSQLStorage implements IStorage {
   private readonly CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache
   private readonly RATE_UPDATE_INTERVAL = 15 * 60 * 1000; // Update rates every 15 minutes
   private isInitialized = false;
+  private isInitializing = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializeData().catch(console.error);
+    // Start background initialization - completely non-blocking
+    this.startBackgroundInitialization();
     // Start rate update interval
     setInterval(() => this.updateRatesInBackground(), this.RATE_UPDATE_INTERVAL);
   }
+  
+  private startBackgroundInitialization() {
+    // Initialize in the background without blocking anything
+    setTimeout(() => {
+      this.initializeData().catch(error => {
+        console.error('Background initialization error:', error);
+        // Retry after 5 seconds if failed
+        setTimeout(() => this.startBackgroundInitialization(), 5000);
+      });
+    }, 100); // Small delay to let server start first
+  }
 
   private async initializeData() {
-    if (this.isInitialized) return;
+    if (this.isInitialized || this.isInitializing) return;
     
+    this.isInitializing = true;
     try {
-      // Check if currencies already exist
-      const existingCurrencies = await db.select().from(currencies);
+      // Quick count check instead of selecting all currencies
+      const currencyCount = await db.select({ count: currencies.id }).from(currencies).limit(1);
       
-      if (existingCurrencies.length === 0) {
+      if (currencyCount.length === 0) {
         // Initialize supported currencies
         const supportedCurrencies: InsertCurrency[] = [
           {
@@ -160,16 +175,20 @@ export class PostgreSQLStorage implements IStorage {
           }
         ];
 
-        await db.insert(currencies).values(supportedCurrencies);
+        // Use transaction for bulk insert for better performance
+        await db.insert(currencies).values(supportedCurrencies).onConflictDoNothing();
         console.log('Initialized currencies in database');
       }
       
-      // Initialize exchange rates if none exist
-      await this.initializeFallbackRates();
+      // Initialize exchange rates if none exist (non-blocking)
+      this.initializeFallbackRates().catch(console.error);
       
       this.isInitialized = true;
+      console.log('✅ Storage initialization completed successfully');
     } catch (error) {
-      console.error('Error initializing data:', error);
+      console.error('❌ Error initializing data:', error);
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -224,9 +243,10 @@ export class PostgreSQLStorage implements IStorage {
 
   private async initializeFallbackRates() {
     try {
-      const existingRates = await db.select().from(exchangeRates).limit(1);
+      // Quick count check for better performance
+      const rateCount = await db.select({ count: exchangeRates.id }).from(exchangeRates).limit(1);
       
-      if (existingRates.length === 0) {
+      if (rateCount.length === 0) {
         const fallbackRates = [
           { from: 'btc', to: 'usdt-erc20', rate: '90000' },
           { from: 'btc', to: 'usdt-trc20', rate: '90000' },

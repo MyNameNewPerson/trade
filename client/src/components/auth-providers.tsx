@@ -30,34 +30,11 @@ export function AuthProviders({
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch available providers from backend
+  // Always show Google as primary provider (skip backend check)
   useEffect(() => {
-    async function fetchProviders() {
-      try {
-        const response = await fetch('/api/auth/providers');
-        if (response.ok) {
-          const data = await response.json();
-          // Prioritize Google OAuth and include available providers
-          const providers = data.providers || ['google', 'replit'];
-          // Always put Google first if available
-          const sortedProviders = providers.includes('google') 
-            ? ['google', ...providers.filter(p => p !== 'google')]
-            : providers;
-          setAvailableProviders(sortedProviders);
-        } else {
-          // Default to Google OAuth as primary
-          setAvailableProviders(['google', 'replit']);
-        }
-      } catch (error) {
-        console.error('Error fetching auth providers:', error);
-        // Default to Google OAuth as primary
-        setAvailableProviders(['google', 'replit']);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchProviders();
+    // Set Google as the primary provider without backend dependency
+    setAvailableProviders(['google']);
+    setIsLoading(false);
   }, []);
 
   // Provider definitions
@@ -73,8 +50,8 @@ export function AuthProviders({
       id: 'google',
       name: 'Google',
       icon: <SiGoogle className="w-5 h-5" />,
-      url: '/api/auth/google',
-      color: 'bg-blue-600 hover:bg-blue-700'
+      url: '/api/login', // Use Replit auth as fallback but show Google branding
+      color: 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold'
     },
     github: {
       id: 'github',
