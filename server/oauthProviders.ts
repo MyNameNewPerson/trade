@@ -8,8 +8,7 @@ import crypto from "crypto";
 
 // Individual provider validation - allows partial OAuth setup
 function validateGoogleConfig(): boolean {
-  // Always return true to enable Google OAuth as fallback
-  return true;
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
 function validateGitHubConfig(): boolean {
@@ -71,26 +70,63 @@ export function setupOAuthProviders(app: Express, baseUrl: string) {
   
   const configuredProviders: string[] = [];
 
-  // Google OAuth Strategy - always enabled as fallback
-  try {
-    // Setup fallback Google OAuth routes that redirect to Replit Auth
+  // Google OAuth Strategy - proper implementation
+  if (validateGoogleConfig()) {
+    try {
+      passport.use('google', new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        callbackURL: `${baseUrl}/api/auth/google/callback`,
+        scope: ['profile', 'email', 'openid']
+      }, verifyOAuthUser));
+
+      // Google OAuth routes with CSRF protection
+      app.get('/api/auth/google', (req, res, next) => {
+        // Generate and store CSRF state parameter
+        const state = crypto.randomBytes(32).toString('hex');
+        req.session.oauthState = state;
+        
+        passport.authenticate('google', { 
+          scope: ['profile', 'email', 'openid'],
+          state: state
+        })(req, res, next);
+      });
+
+      app.get('/api/auth/google/callback', (req, res, next) => {
+        // Verify CSRF state parameter
+        const state = req.query.state as string;
+        if (!state || state !== req.session.oauthState) {
+          return res.redirect('/api/login?error=csrf_failed');
+        }
+        
+        // Clear the state from session
+        delete req.session.oauthState;
+        
+        passport.authenticate('google', {
+          successRedirect: '/',
+          failureRedirect: '/api/login?error=oauth_failed'
+        })(req, res, next);
+      });
+
+      configuredProviders.push('google');
+      console.log('✅ Google OAuth configured successfully');
+    } catch (error) {
+      console.error('❌ Failed to configure Google OAuth:', error);
+    }
+  } else {
+    console.log('⚠️  Google OAuth not configured - missing environment variables');
+    console.log('ℹ️  To enable Google OAuth, set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables');
+    
+    // Setup fallback routes that redirect to Replit Auth when Google is not configured
     app.get('/api/auth/google', (req, res) => {
-      console.log('🔄 Google OAuth fallback - redirecting to Replit Auth');
+      console.log('🔄 Google OAuth not configured - redirecting to Replit Auth');
       res.redirect('/api/login');
     });
 
     app.get('/api/auth/google/callback', (req, res) => {
-      console.log('🔄 Google OAuth callback fallback - redirecting to Replit Auth');
+      console.log('🔄 Google OAuth not configured - redirecting to Replit Auth');
       res.redirect('/api/login');
     });
-
-    // ALWAYS add Google to configured providers (as fallback)
-    configuredProviders.push('google');
-    console.log('✅ Google OAuth configured as fallback (redirects to Replit Auth)');
-  } catch (error) {
-    console.error('❌ Failed to configure Google OAuth fallback:', error);
-    // Still add Google even if fallback setup fails
-    configuredProviders.push('google');
   }
 
   // GitHub OAuth Strategy - independent setup
