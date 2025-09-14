@@ -123,16 +123,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
-  // Removed redundant interval - PostgreSQL storage handles background updates
-  // Just broadcast cached rates to WebSocket clients every 2 minutes
+  // Sync WebSocket broadcasts with storage update interval to avoid unnecessary overhead
+  // Broadcast cached rates to WebSocket clients every 15 minutes (matches storage interval)
   setInterval(async () => {
+    if (clients.size === 0) {
+      console.log('Skipping WebSocket broadcast - no connected clients');
+      return;
+    }
+    
     try {
       const rates = await storage.getLatestRates(); // This uses cache, no API calls
       broadcastRateUpdate(rates);
+      console.log(`Broadcasted rate updates to ${clients.size} WebSocket clients`);
     } catch (error) {
       console.error('Error broadcasting cached rates:', error);
     }
-  }, 120000); // 2 minutes - sync with storage update interval
+  }, 900000); // 15 minutes - sync with storage update interval for efficiency
 
   // API Routes
   

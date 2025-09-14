@@ -26,7 +26,10 @@ interface BybitTickerResponse {
 export class ExchangeRateService {
   private static instance: ExchangeRateService;
   private cache: Map<string, { rate: number; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 30000; // 30 seconds
+  private failureCache: Map<string, { timestamp: number; attempts: number }> = new Map();
+  private readonly CACHE_DURATION = 900000; // 15 minutes
+  private readonly FAILURE_BACKOFF_BASE = 60000; // 1 minute base backoff
+  private readonly MAX_FAILURE_ATTEMPTS = 3;
 
   static getInstance(): ExchangeRateService {
     if (!ExchangeRateService.instance) {
@@ -39,8 +42,17 @@ export class ExchangeRateService {
     const cacheKey = `${fromCurrency}-${toCurrency}`;
     const cached = this.cache.get(cacheKey);
     
+    // Return cached rate if available and fresh
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.rate;
+    }
+
+    // Check if we should skip API calls due to recent failures
+    if (this.shouldSkipAPICall(cacheKey)) {
+      console.log(`Skipping API call for ${cacheKey} due to recent failures, using fallback`);
+      const fallbackRate = this.getFallbackRate(fromCurrency, toCurrency);
+      this.cache.set(cacheKey, { rate: fallbackRate, timestamp: Date.now() });
+      return fallbackRate;
     }
 
     try {
@@ -67,6 +79,9 @@ export class ExchangeRateService {
       this.cache.set(cacheKey, { rate, timestamp: Date.now() });
       return rate;
     } catch (error) {
+      // Track API failures for exponential backoff
+      this.trackAPIFailure(cacheKey);
+      
       console.log(`All APIs failed for ${fromCurrency} to ${toCurrency}, using fallback:`, error instanceof Error ? error.message : String(error));
       const fallbackRate = this.getFallbackRate(fromCurrency, toCurrency);
       this.cache.set(cacheKey, { rate: fallbackRate, timestamp: Date.now() });
@@ -213,6 +228,36 @@ export class ExchangeRateService {
     return usdAmount * rate;
   }
 
+  private shouldSkipAPICall(cacheKey: string): boolean {
+    const failure = this.failureCache.get(cacheKey);
+    if (!failure) return false;
+    
+    // Calculate exponential backoff time
+    const backoffTime = this.FAILURE_BACKOFF_BASE * Math.pow(2, failure.attempts - 1);
+    const timeSinceFailure = Date.now() - failure.timestamp;
+    
+    // Skip API call if we're still in backoff period and haven't hit max attempts
+    return timeSinceFailure < backoffTime && failure.attempts < this.MAX_FAILURE_ATTEMPTS;
+  }
+
+  private trackAPIFailure(cacheKey: string): void {
+    const existing = this.failureCache.get(cacheKey);
+    if (existing) {
+      existing.attempts += 1;
+      existing.timestamp = Date.now();
+    } else {
+      this.failureCache.set(cacheKey, { timestamp: Date.now(), attempts: 1 });
+    }
+    
+    // Clean up old failure records after 1 hour
+    const oneHourAgo = Date.now() - 3600000;
+    for (const [key, value] of Array.from(this.failureCache.entries())) {
+      if (value.timestamp < oneHourAgo) {
+        this.failureCache.delete(key);
+      }
+    }
+  }
+
   private getFallbackRate(fromCurrency: string, toCurrency: string): number {
     // Comprehensive fallback rates with current market values
     const fallbackRates: { [key: string]: number } = {
@@ -273,6 +318,7 @@ export class ExchangeRateService {
   }
 
   async getAllRates(): Promise<Array<{ fromCurrency: string; toCurrency: string; rate: string }>> {
+    console.log('getAllRates: Prioritizing cached and fallback rates over API calls...');
     const pairs = [
       // Stablecoins to fiat
       { from: 'usdt-trc20', to: 'card-mdl' },
@@ -299,16 +345,33 @@ export class ExchangeRateService {
       { from: 'eth', to: 'usdc' },
     ];
 
-    const rates = await Promise.all(
-      pairs.map(async (pair) => {
+    // Process pairs with delays to avoid rate limits
+    const rates = [];
+    for (let i = 0; i < pairs.length; i++) {
+      const pair = pairs[i];
+      try {
         const rate = await this.getRate(pair.from, pair.to);
-        return {
+        rates.push({
           fromCurrency: pair.from,
           toCurrency: pair.to,
           rate: rate.toFixed(8)
-        };
-      })
-    );
+        });
+        
+        // Add small delay between pairs to avoid hammering APIs
+        if (i < pairs.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.error(`Failed to get rate for ${pair.from}-${pair.to}:`, error);
+        // Use fallback rate instead of failing entire operation
+        const fallbackRate = this.getFallbackRate(pair.from, pair.to);
+        rates.push({
+          fromCurrency: pair.from,
+          toCurrency: pair.to,
+          rate: fallbackRate.toFixed(8)
+        });
+      }
+    }
 
     return rates;
   }

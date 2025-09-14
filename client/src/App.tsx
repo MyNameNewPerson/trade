@@ -1,51 +1,68 @@
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { ThemeProvider } from "./contexts/theme-context";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "./lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
-import Home from "@/pages/home";
-import OrderStatus from "@/pages/order-status";
-import Rates from "@/pages/rates";
-import Support from "@/pages/support";
-import About from "@/pages/about";
-import NotFound from "@/pages/not-found";
-import { AdminLoginPage } from "@/pages/admin-login";
-import { AdminPanelPage } from "@/pages/admin-panel";
-import Landing from "@/pages/landing";
-import UserDashboard from "@/pages/user-dashboard";
+import Home from "@/pages/home"; // Keep Home eager-loaded as main landing page
+
+// Lazy load non-critical pages for better performance
+const OrderStatus = lazy(() => import("@/pages/order-status"));
+const Rates = lazy(() => import("@/pages/rates"));
+const Support = lazy(() => import("@/pages/support"));
+const About = lazy(() => import("@/pages/about"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const AdminLoginPage = lazy(() => import("@/pages/admin-login").then(module => ({ default: module.AdminLoginPage })));
+const AdminPanelPage = lazy(() => import("@/pages/admin-panel").then(module => ({ default: module.AdminPanelPage })));
+const Landing = lazy(() => import("@/pages/landing"));
+const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
+
+// High-performance loading component with skeleton
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/60"></div>
+        <div className="text-white/80 text-sm font-medium">Loading...</div>
+      </div>
+    </div>
+  );
+}
 
 function Router() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Switch>
-      {/* Main exchange page - always accessible */}
-      <Route path="/" component={Home} />
-      <Route path="/exchange" component={Home} />
-      
-      {/* Public pages - accessible by everyone */}
-      <Route path="/order-status" component={OrderStatus} />
-      <Route path="/rates" component={Rates} />
-      <Route path="/support" component={Support} />
-      <Route path="/about" component={About} />
-      
-      {/* User dashboard - only for authenticated users */}
-      {isAuthenticated && (
-        <Route path="/dashboard" component={UserDashboard} />
-      )}
-      
-      {/* Admin pages */}
-      <Route path="/admin/login" component={AdminLoginPage} />
-      {isAuthenticated && (
-        <Route path="/admin" component={AdminPanelPage} />
-      )}
-      
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<LoadingFallback />}>
+      <Switch>
+        {/* Main exchange page - always accessible (eager loaded) */}
+        <Route path="/" component={Home} />
+        <Route path="/exchange" component={Home} />
+        
+        {/* Public pages - accessible by everyone (lazy loaded) */}
+        <Route path="/order-status" component={OrderStatus} />
+        <Route path="/rates" component={Rates} />
+        <Route path="/support" component={Support} />
+        <Route path="/about" component={About} />
+        
+        {/* User dashboard - only for authenticated users */}
+        {isAuthenticated && (
+          <Route path="/dashboard" component={UserDashboard} />
+        )}
+        
+        {/* Admin pages */}
+        <Route path="/admin/login" component={AdminLoginPage} />
+        {isAuthenticated && (
+          <Route path="/admin" component={AdminPanelPage} />
+        )}
+        
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

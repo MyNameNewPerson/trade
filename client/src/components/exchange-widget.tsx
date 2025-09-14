@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useAuth } from "@/hooks/useAuth";
+import { usePerformanceTracking } from "@/lib/performance";
 import type { Currency, ExchangeRate } from "@shared/schema";
 
 const exchangeFormSchema = z.object({
@@ -68,11 +69,49 @@ const exchangeFormSchema = z.object({
 
 type ExchangeFormData = z.infer<typeof exchangeFormSchema>;
 
+// Skeleton loader for better perceived performance
+function ExchangeWidgetSkeleton() {
+  return (
+    <div className="max-w-2xl mx-auto glassmorphism rounded-2xl p-8 shadow-2xl animate-pulse">
+      <div className="flex justify-between items-center mb-6">
+        <div className="h-8 w-48 bg-white/20 rounded"></div>
+        <div className="flex space-x-2">
+          <div className="h-8 w-20 bg-white/20 rounded"></div>
+          <div className="h-8 w-20 bg-white/20 rounded"></div>
+        </div>
+      </div>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="h-4 w-20 bg-white/20 rounded"></div>
+          <div className="flex space-x-3">
+            <div className="h-12 flex-1 bg-white/20 rounded"></div>
+            <div className="h-12 w-32 bg-white/20 rounded"></div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-24 bg-white/20 rounded"></div>
+          <div className="flex space-x-3">
+            <div className="h-12 flex-1 bg-white/20 rounded"></div>
+            <div className="h-12 w-32 bg-white/20 rounded"></div>
+          </div>
+        </div>
+        <div className="h-12 w-full bg-white/20 rounded"></div>
+      </div>
+    </div>
+  );
+}
+
 export function ExchangeWidget() {
+  const { trackRender } = usePerformanceTracking('ExchangeWidget');
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [rateType, setRateType] = useState<"fixed" | "float">("fixed");
+  
+  // Track render performance
+  useEffect(() => {
+    trackRender();
+  }, [trackRender]);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [receiveAmount, setReceiveAmount] = useState<string>("0");
   const [timeRemaining, setTimeRemaining] = useState<number>(600); // 10 minutes
@@ -96,12 +135,19 @@ export function ExchangeWidget() {
     },
   });
 
-  const { data: currencies = [] } = useQuery<Currency[]>({
+  const { data: currencies = [], isLoading: currenciesLoading } = useQuery<Currency[]>({
     queryKey: ['/api/currencies'],
+    staleTime: 10 * 60 * 1000, // Consider data fresh for 10 minutes
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus for better performance
   });
 
-  const { data: rates = [] } = useQuery<ExchangeRate[]>({
+  const { data: rates = [], isLoading: ratesLoading } = useQuery<ExchangeRate[]>({
     queryKey: ['/api/rates'],
+    staleTime: 15 * 60 * 1000, // Consider data fresh for 15 minutes (matches server cache)
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes  
+    refetchOnWindowFocus: false, // Don't refetch on window focus for better performance
+    refetchInterval: 15 * 60 * 1000, // Auto-refetch every 15 minutes
   });
 
   const createOrderMutation = useMutation({
@@ -157,7 +203,7 @@ export function ExchangeWidget() {
     const toCurrency = form.watch("toCurrency");
     
     if (fromCurrency && toCurrency) {
-      const rate = rates.find(r => r.fromCurrency === fromCurrency && r.toCurrency === toCurrency);
+      const rate = (rates as ExchangeRate[]).find((r: ExchangeRate) => r.fromCurrency === fromCurrency && r.toCurrency === toCurrency);
       if (rate) {
         setExchangeRate(parseFloat(rate.rate));
       }
@@ -223,13 +269,18 @@ export function ExchangeWidget() {
 
   const toCurrencyValue = form.watch("toCurrency");
   const isCardPayout = toCurrencyValue.startsWith("card-");
-  const isCryptoPayout = !toCurrencyValue.startsWith("card-") && currencies.find(c => c.id === toCurrencyValue)?.type === 'crypto';
-  const fromCurrency = currencies.find(c => c.id === form.watch("fromCurrency"));
-  const toCurrency = currencies.find(c => c.id === toCurrencyValue);
+  const isCryptoPayout = !toCurrencyValue.startsWith("card-") && (currencies as Currency[]).find((c: Currency) => c.id === toCurrencyValue)?.type === 'crypto';
+  const fromCurrency = (currencies as Currency[]).find((c: Currency) => c.id === form.watch("fromCurrency"));
+  const toCurrency = (currencies as Currency[]).find((c: Currency) => c.id === toCurrencyValue);
 
   const onSubmit = (data: ExchangeFormData) => {
     createOrderMutation.mutate(data);
   };
+
+  // Show skeleton while essential data is loading
+  if (currenciesLoading || ratesLoading) {
+    return <ExchangeWidgetSkeleton />;
+  }
 
   return (
     <div className="max-w-2xl mx-auto glassmorphism rounded-2xl p-8 shadow-2xl animate-slide-up">
@@ -305,7 +356,7 @@ export function ExchangeWidget() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {currencies.filter(c => c.type === 'crypto').map((currency) => (
+                        {(currencies as Currency[]).filter((c: Currency) => c.type === 'crypto').map((currency: Currency) => (
                           <SelectItem key={currency.id} value={currency.id} data-testid={`option-from-${currency.id}`}>
                             {currency.name}
                           </SelectItem>
@@ -366,7 +417,7 @@ export function ExchangeWidget() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {currencies.map((currency) => (
+                        {(currencies as Currency[]).map((currency: Currency) => (
                           <SelectItem key={currency.id} value={currency.id} data-testid={`option-to-${currency.id}`}>
                             {currency.name}
                           </SelectItem>

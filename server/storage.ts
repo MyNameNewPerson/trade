@@ -50,8 +50,8 @@ export interface IStorage {
 
 export class PostgreSQLStorage implements IStorage {
   private rateCache: Map<string, { rate: ExchangeRate; timestamp: number }> = new Map();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
-  private readonly RATE_UPDATE_INTERVAL = 2 * 60 * 1000; // Update rates every 2 minutes
+  private readonly CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache
+  private readonly RATE_UPDATE_INTERVAL = 15 * 60 * 1000; // Update rates every 15 minutes
   private isInitialized = false;
 
   constructor() {
