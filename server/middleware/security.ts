@@ -91,7 +91,9 @@ class SecurityMiddleware {
     const allowedOrigins = [
       'http://localhost:5000',
       'http://127.0.0.1:5000',
-      process.env.FRONTEND_URL
+      process.env.FRONTEND_URL,
+      // Production Replit domains
+      ...(process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',').map(domain => `https://${domain}`) : [])
     ].filter(Boolean);
 
     if (allowedOrigins.includes(origin)) {
@@ -134,6 +136,37 @@ class SecurityMiddleware {
     if (entry.count >= maxOrders) {
       res.status(429).json({
         error: 'Order creation rate limit exceeded. Please wait before creating another order.',
+        retryAfter: Math.ceil((entry.resetTime - now) / 1000)
+      });
+      return;
+    }
+
+    entry.count++;
+    next();
+  };
+
+  // Rate limiting for KYC requests (very restrictive)
+  kycRateLimiter = (req: Request, res: Response, next: NextFunction) => {
+    const clientId = this.getClientId(req);
+    const now = Date.now();
+    const windowSize = 15 * 60 * 1000; // 15 minutes
+    const maxRequests = 2; // max 2 KYC requests per 15 minutes
+    
+    const key = `kyc_${clientId}`;
+    const entry = this.rateLimitMap.get(key);
+
+    if (!entry || now > entry.resetTime) {
+      this.rateLimitMap.set(key, {
+        count: 1,
+        resetTime: now + windowSize
+      });
+      next();
+      return;
+    }
+
+    if (entry.count >= maxRequests) {
+      res.status(429).json({
+        error: 'KYC request rate limit exceeded. Please wait before submitting another request.',
         retryAfter: Math.ceil((entry.resetTime - now) / 1000)
       });
       return;

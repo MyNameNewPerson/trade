@@ -123,15 +123,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
-  // Update rates from real exchanges every 30 seconds
+  // Removed redundant interval - PostgreSQL storage handles background updates
+  // Just broadcast cached rates to WebSocket clients every 2 minutes
   setInterval(async () => {
     try {
-      const rates = await storage.getLatestRates();
+      const rates = await storage.getLatestRates(); // This uses cache, no API calls
       broadcastRateUpdate(rates);
     } catch (error) {
-      console.error('Error updating rates:', error);
+      console.error('Error broadcasting cached rates:', error);
     }
-  }, 30000);
+  }, 120000); // 2 minutes - sync with storage update interval
 
   // API Routes
   
@@ -151,26 +152,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get exchange rates
+  // Get exchange rates (uses cache - no API calls)
   app.get('/api/rates', async (req, res) => {
     try {
-      const rates = await storage.getLatestRates();
+      const rates = await storage.getLatestRates(); // Returns cached rates
+      res.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
       res.json(rates);
     } catch (error) {
+      console.error('Error fetching rates:', error);
       res.status(500).json({ error: 'Failed to fetch rates' });
     }
   });
 
-  // Get specific exchange rate
+  // Get specific exchange rate (with currency validation)
   app.get('/api/rates/:from/:to', async (req, res) => {
     try {
       const { from, to } = req.params;
+      
+      // Validate currencies exist and are active
+      const [fromCurrency, toCurrency] = await Promise.all([
+        storage.getCurrency(from),
+        storage.getCurrency(to)
+      ]);
+      
+      if (!fromCurrency || !fromCurrency.isActive) {
+        return res.status(400).json({ error: `Invalid or inactive currency: ${from}` });
+      }
+      
+      if (!toCurrency || !toCurrency.isActive) {
+        return res.status(400).json({ error: `Invalid or inactive currency: ${to}` });
+      }
+      
       const rate = await storage.getExchangeRate(from, to);
       
       if (!rate) {
         return res.status(404).json({ error: 'Exchange rate not found' });
       }
       
+      res.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
       res.json(rate);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch exchange rate' });
@@ -282,10 +301,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create KYC request
-  app.post('/api/kyc', async (req, res) => {
+  // Create KYC request (with rate limiting and validation)
+  app.post('/api/kyc', security.kycRateLimiter, async (req, res) => {
     try {
       const { orderId, documentType } = req.body;
+      
+      // Validate the order exists
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      
+      // Check if KYC request already exists
+      const existingKyc = await storage.getKycRequest(orderId);
+      if (existingKyc) {
+        return res.status(409).json({ error: 'KYC request already exists for this order' });
+      }
       
       const kycRequest = await storage.createKycRequest({
         orderId,
@@ -297,6 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(kycRequest);
     } catch (error) {
+      console.error('Error creating KYC request:', error);
       res.status(500).json({ error: 'Failed to create KYC request' });
     }
   });
@@ -319,7 +351,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      version: '1.0.0'
+    });
+  });
+
+  // Readiness check endpoint
+  app.get('/api/ready', async (req, res) => {
+    try {
+      // Check database connectivity
+      await storage.getCurrencies();
+      
+      res.json({ 
+        status: 'ready', 
+        timestamp: new Date().toISOString(),
+        services: {
+          database: 'connected',
+          storage: 'initialized'
+        }
+      });
+    } catch (error) {
+      console.error('Readiness check failed:', error);
+      res.status(503).json({ 
+        status: 'not_ready', 
+        timestamp: new Date().toISOString(),
+        error: 'Database connection failed'
+      });
+    }
   });
 
   return httpServer;

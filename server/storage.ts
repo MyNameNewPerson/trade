@@ -1,7 +1,10 @@
 import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type CreateOrderRequest } from "@shared/schema";
+import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { exchangeRateService } from "./services/exchange-api";
 import { telegramService } from "./services/telegram";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Currency operations
@@ -31,6 +34,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Wallet settings operations
   getWalletSettings(): Promise<WalletSetting[]>;
@@ -44,184 +48,154 @@ export interface IStorage {
   setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting>;
 }
 
-export class MemStorage implements IStorage {
-  private currencies: Map<string, Currency> = new Map();
-  private exchangeRates: Map<string, ExchangeRate> = new Map();
-  private orders: Map<string, Order> = new Map();
-  private kycRequests: Map<string, KycRequest> = new Map();
-  private users: Map<string, User> = new Map();
-  private walletSettings: Map<string, WalletSetting> = new Map();
-  private platformSettings: Map<string, PlatformSetting> = new Map();
+export class PostgreSQLStorage implements IStorage {
+  private rateCache: Map<string, { rate: ExchangeRate; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+  private readonly RATE_UPDATE_INTERVAL = 2 * 60 * 1000; // Update rates every 2 minutes
+  private isInitialized = false;
 
   constructor() {
-    this.initializeData();
+    this.initializeData().catch(console.error);
+    // Start rate update interval
+    setInterval(() => this.updateRatesInBackground(), this.RATE_UPDATE_INTERVAL);
   }
 
-  private initializeData() {
-    // Initialize supported currencies
-    const supportedCurrencies: Currency[] = [
-      {
-        id: 'btc',
-        name: 'Bitcoin',
-        symbol: 'BTC',
-        type: 'crypto',
-        network: 'BTC',
-        minAmount: '0.001',
-        maxAmount: '10',
-        isActive: true,
-        iconUrl: 'https://cryptoicons.org/api/icon/btc/200'
-      },
-      {
-        id: 'eth',
-        name: 'Ethereum',
-        symbol: 'ETH',
-        type: 'crypto',
-        network: 'ETH',
-        minAmount: '0.01',
-        maxAmount: '100',
-        isActive: true,
-        iconUrl: 'https://cryptoicons.org/api/icon/eth/200'
-      },
-      {
-        id: 'usdt-trc20',
-        name: 'Tether TRC20',
-        symbol: 'USDT',
-        type: 'crypto',
-        network: 'TRC20',
-        minAmount: '50',
-        maxAmount: '50000',
-        isActive: true,
-        iconUrl: 'https://cryptoicons.org/api/icon/usdt/200'
-      },
-      {
-        id: 'usdt-erc20',
-        name: 'Tether ERC20',
-        symbol: 'USDT',
-        type: 'crypto',
-        network: 'ERC20',
-        minAmount: '50',
-        maxAmount: '50000',
-        isActive: true,
-        iconUrl: 'https://cryptoicons.org/api/icon/usdt/200'
-      },
-      {
-        id: 'usdc',
-        name: 'USD Coin',
-        symbol: 'USDC',
-        type: 'crypto',
-        network: 'ERC20',
-        minAmount: '50',
-        maxAmount: '50000',
-        isActive: true,
-        iconUrl: 'https://cryptoicons.org/api/icon/usdc/200'
-      },
-      {
-        id: 'card-mdl',
-        name: 'Visa/MasterCard MDL',
-        symbol: 'MDL',
-        type: 'fiat',
-        network: null,
-        minAmount: '500',
-        maxAmount: '500000',
-        isActive: true,
-        iconUrl: null
-      },
-      {
-        id: 'card-usd',
-        name: 'Visa/MasterCard USD',
-        symbol: 'USD',
-        type: 'fiat',
-        network: null,
-        minAmount: '50',
-        maxAmount: '50000',
-        isActive: true,
-        iconUrl: null
-      },
-      {
-        id: 'card-eur',
-        name: 'Visa/MasterCard EUR',
-        symbol: 'EUR',
-        type: 'fiat',
-        network: null,
-        minAmount: '50',
-        maxAmount: '50000',
-        isActive: true,
-        iconUrl: null
+  private async initializeData() {
+    if (this.isInitialized) return;
+    
+    try {
+      // Check if currencies already exist
+      const existingCurrencies = await db.select().from(currencies);
+      
+      if (existingCurrencies.length === 0) {
+        // Initialize supported currencies
+        const supportedCurrencies: InsertCurrency[] = [
+          {
+            id: 'btc',
+            name: 'Bitcoin',
+            symbol: 'BTC',
+            type: 'crypto',
+            network: 'BTC',
+            minAmount: '0.001',
+            maxAmount: '10',
+            isActive: true,
+            iconUrl: 'https://cryptoicons.org/api/icon/btc/200'
+          },
+          {
+            id: 'eth',
+            name: 'Ethereum',
+            symbol: 'ETH',
+            type: 'crypto',
+            network: 'ETH',
+            minAmount: '0.01',
+            maxAmount: '100',
+            isActive: true,
+            iconUrl: 'https://cryptoicons.org/api/icon/eth/200'
+          },
+          {
+            id: 'usdt-trc20',
+            name: 'Tether TRC20',
+            symbol: 'USDT',
+            type: 'crypto',
+            network: 'TRC20',
+            minAmount: '50',
+            maxAmount: '50000',
+            isActive: true,
+            iconUrl: 'https://cryptoicons.org/api/icon/usdt/200'
+          },
+          {
+            id: 'usdt-erc20',
+            name: 'Tether ERC20',
+            symbol: 'USDT',
+            type: 'crypto',
+            network: 'ERC20',
+            minAmount: '50',
+            maxAmount: '50000',
+            isActive: true,
+            iconUrl: 'https://cryptoicons.org/api/icon/usdt/200'
+          },
+          {
+            id: 'usdc',
+            name: 'USD Coin',
+            symbol: 'USDC',
+            type: 'crypto',
+            network: 'ERC20',
+            minAmount: '50',
+            maxAmount: '50000',
+            isActive: true,
+            iconUrl: 'https://cryptoicons.org/api/icon/usdc/200'
+          },
+          {
+            id: 'card-mdl',
+            name: 'Visa/MasterCard MDL',
+            symbol: 'MDL',
+            type: 'fiat',
+            network: null,
+            minAmount: '500',
+            maxAmount: '500000',
+            isActive: true,
+            iconUrl: null
+          },
+          {
+            id: 'card-usd',
+            name: 'Visa/MasterCard USD',
+            symbol: 'USD',
+            type: 'fiat',
+            network: null,
+            minAmount: '50',
+            maxAmount: '50000',
+            isActive: true,
+            iconUrl: null
+          },
+          {
+            id: 'card-eur',
+            name: 'Visa/MasterCard EUR',
+            symbol: 'EUR',
+            type: 'fiat',
+            network: null,
+            minAmount: '50',
+            maxAmount: '50000',
+            isActive: true,
+            iconUrl: null
+          }
+        ];
+
+        await db.insert(currencies).values(supportedCurrencies);
+        console.log('Initialized currencies in database');
       }
-    ];
-
-    supportedCurrencies.forEach(currency => {
-      this.currencies.set(currency.id, currency);
-    });
-
-    // Initialize exchange rates
-    const initialRates: ExchangeRate[] = [
-      {
-        id: randomUUID(),
-        fromCurrency: 'usdt-trc20',
-        toCurrency: 'card-mdl',
-        rate: '16.16',
-        timestamp: new Date()
-      },
-      {
-        id: randomUUID(),
-        fromCurrency: 'usdt-erc20',
-        toCurrency: 'card-mdl',
-        rate: '16.14',
-        timestamp: new Date()
-      },
-      {
-        id: randomUUID(),
-        fromCurrency: 'btc',
-        toCurrency: 'usdt-trc20',
-        rate: '97500.00',
-        timestamp: new Date()
-      },
-      {
-        id: randomUUID(),
-        fromCurrency: 'eth',
-        toCurrency: 'usdt-trc20',
-        rate: '3850.00',
-        timestamp: new Date()
-      }
-    ];
-
-    initialRates.forEach(rate => {
-      this.exchangeRates.set(`${rate.fromCurrency}-${rate.toCurrency}`, rate);
-    });
+      
+      // Initialize exchange rates if none exist
+      await this.initializeFallbackRates();
+      
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('Error initializing data:', error);
+    }
   }
 
-  async getCurrencies(): Promise<Currency[]> {
-    return Array.from(this.currencies.values()).filter(c => c.isActive);
+  private async updateRatesInBackground() {
+    try {
+      console.log('Updating exchange rates...');
+      await this.refreshRatesFromAPI();
+    } catch (error) {
+      console.error('Error updating rates in background:', error);
+    }
   }
 
-  async getCurrency(id: string): Promise<Currency | undefined> {
-    return this.currencies.get(id);
-  }
-
-  async createCurrency(currency: InsertCurrency): Promise<Currency> {
-    const newCurrency: Currency = {
-      ...currency,
-      network: currency.network ?? null,
-      isActive: currency.isActive ?? true,
-      iconUrl: currency.iconUrl ?? null
-    };
-    this.currencies.set(currency.id, newCurrency);
-    return newCurrency;
-  }
-
-  async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate | undefined> {
-    return this.exchangeRates.get(`${fromCurrency}-${toCurrency}`);
-  }
-
-  async getLatestRates(): Promise<ExchangeRate[]> {
-    // Update rates from external API
+  private async refreshRatesFromAPI() {
     try {
       const realRates = await exchangeRateService.getAllRates();
       
-      // Update stored rates if we got valid data
       if (realRates && realRates.length > 0) {
-        for (const rate of realRates) {
+        // Validate currency pairs against active currencies
+        const activeCurrencies = await this.getCurrencies();
+        const activeCurrencyIds = new Set(activeCurrencies.map(c => c.id));
+        
+        const validRates = realRates.filter(rate => 
+          activeCurrencyIds.has(rate.fromCurrency) && activeCurrencyIds.has(rate.toCurrency)
+        );
+        
+        for (const rate of validRates) {
           const rateData: ExchangeRate = {
             id: randomUUID(),
             fromCurrency: rate.fromCurrency,
@@ -229,445 +203,144 @@ export class MemStorage implements IStorage {
             rate: rate.rate,
             timestamp: new Date()
           };
-          this.exchangeRates.set(`${rate.fromCurrency}-${rate.toCurrency}`, rateData);
+          
+          // Update cache
+          this.rateCache.set(`${rate.fromCurrency}-${rate.toCurrency}`, {
+            rate: rateData,
+            timestamp: Date.now()
+          });
+          
+          // Update/insert in database
+          await db.insert(exchangeRates).values(rateData)
+            .onConflictDoNothing();
         }
-      } else {
-        // Ensure we have fallback rates if no stored rates exist
-        if (this.exchangeRates.size === 0) {
-          this.initializeFallbackRates();
-        }
       }
     } catch (error) {
-      // Silently handle errors and ensure fallback rates
-      if (this.exchangeRates.size === 0) {
-        this.initializeFallbackRates();
-      }
-    }
-
-    return Array.from(this.exchangeRates.values());
-  }
-
-  private initializeFallbackRates() {
-    const fallbackRates = [
-      { from: 'btc', to: 'usdt-erc20', rate: '90000' },
-      { from: 'btc', to: 'usdt-trc20', rate: '90000' },
-      { from: 'btc', to: 'card-usd', rate: '90000' },
-      { from: 'eth', to: 'usdt-erc20', rate: '3200' },
-      { from: 'eth', to: 'usdt-trc20', rate: '3200' },
-      { from: 'eth', to: 'card-usd', rate: '3200' },
-      { from: 'usdt-erc20', to: 'btc', rate: '0.000011' },
-      { from: 'usdt-erc20', to: 'eth', rate: '0.0003125' },
-      { from: 'usdt-erc20', to: 'card-usd', rate: '1' },
-      { from: 'usdt-trc20', to: 'btc', rate: '0.000011' },
-      { from: 'usdt-trc20', to: 'eth', rate: '0.0003125' },
-      { from: 'usdt-trc20', to: 'card-usd', rate: '1' },
-      { from: 'usdt-trc20', to: 'card-mdl', rate: '18.5' },
-      { from: 'usdt-trc20', to: 'card-eur', rate: '0.92' },
-    ];
-    
-    for (const rate of fallbackRates) {
-      const rateData: ExchangeRate = {
-        id: randomUUID(),
-        fromCurrency: rate.from,
-        toCurrency: rate.to,
-        rate: rate.rate,
-        timestamp: new Date()
-      };
-      this.exchangeRates.set(`${rate.from}-${rate.to}`, rateData);
+      console.error('Error refreshing rates from API:', error);
+      // Ensure fallback rates exist
+      await this.initializeFallbackRates();
     }
   }
 
-  async createExchangeRate(rate: InsertExchangeRate): Promise<ExchangeRate> {
-    const newRate: ExchangeRate = {
-      id: rate.id || randomUUID(),
-      ...rate,
-      timestamp: rate.timestamp || new Date()
-    };
-    this.exchangeRates.set(`${rate.fromCurrency}-${rate.toCurrency}`, newRate);
-    return newRate;
-  }
-
-  async createOrder(orderRequest: CreateOrderRequest): Promise<Order> {
-    const orderId = 'CF-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-    
-    // Calculate amounts and fees
-    const fromAmount = parseFloat(orderRequest.fromAmount);
-    const platformFee = fromAmount * 0.005; // 0.5% fee
-    const networkFee = orderRequest.fromCurrency.includes('usdt') ? 2 : 0.0001;
-    
-    // Get real-time exchange rate
-    let exchangeRate: number;
+  private async initializeFallbackRates() {
     try {
-      exchangeRate = await exchangeRateService.getRate(orderRequest.fromCurrency, orderRequest.toCurrency);
-    } catch (error) {
-      console.error('Failed to get real-time rate, using fallback:', error);
-      const rate = await this.getExchangeRate(orderRequest.fromCurrency, orderRequest.toCurrency);
-      exchangeRate = rate ? parseFloat(rate.rate) : 1;
-    }
-    
-    const effectiveAmount = fromAmount - platformFee - networkFee;
-    const toAmount = effectiveAmount * exchangeRate;
-
-    // Generate deposit address (mock)
-    const depositAddress = this.generateDepositAddress(orderRequest.fromCurrency);
-
-    // Mask card number if provided
-    let cardDetails = null;
-    if (orderRequest.cardDetails) {
-      cardDetails = {
-        ...orderRequest.cardDetails,
-        number: this.maskCardNumber(orderRequest.cardDetails.number)
-      };
-    }
-
-    const newOrder: Order = {
-      id: orderId,
-      userId: orderRequest.userId || null,
-      fromCurrency: orderRequest.fromCurrency,
-      toCurrency: orderRequest.toCurrency,
-      fromAmount: fromAmount.toString(),
-      toAmount: toAmount.toString(),
-      exchangeRate: exchangeRate.toString(),
-      rateType: orderRequest.rateType,
-      status: 'awaiting_deposit',
-      depositAddress,
-      recipientAddress: orderRequest.recipientAddress || null,
-      cardDetails,
-      contactEmail: orderRequest.contactEmail || null,
-      platformFee: platformFee.toString(),
-      networkFee: networkFee.toString(),
-      rateLockExpiry: orderRequest.rateType === 'fixed' ? 
-        new Date(Date.now() + 10 * 60 * 1000) : null, // 10 minutes lock
-      txHash: null,
-      payoutTxHash: null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.orders.set(orderId, newOrder);
-    
-    // Send Telegram notification
-    try {
-      if (telegramService.isConfigured()) {
-        await telegramService.sendOrderNotification(newOrder);
-        console.log(`Telegram notification sent for order ${orderId}`);
-      } else {
-        console.log('Telegram not configured, skipping notification');
+      const existingRates = await db.select().from(exchangeRates).limit(1);
+      
+      if (existingRates.length === 0) {
+        const fallbackRates = [
+          { from: 'btc', to: 'usdt-erc20', rate: '90000' },
+          { from: 'btc', to: 'usdt-trc20', rate: '90000' },
+          { from: 'btc', to: 'card-usd', rate: '90000' },
+          { from: 'eth', to: 'usdt-erc20', rate: '3200' },
+          { from: 'eth', to: 'usdt-trc20', rate: '3200' },
+          { from: 'eth', to: 'card-usd', rate: '3200' },
+          { from: 'usdt-erc20', to: 'btc', rate: '0.000011' },
+          { from: 'usdt-erc20', to: 'eth', rate: '0.0003125' },
+          { from: 'usdt-erc20', to: 'card-usd', rate: '1' },
+          { from: 'usdt-trc20', to: 'btc', rate: '0.000011' },
+          { from: 'usdt-trc20', to: 'eth', rate: '0.0003125' },
+          { from: 'usdt-trc20', to: 'card-usd', rate: '1' },
+          { from: 'usdt-trc20', to: 'card-mdl', rate: '18.5' },
+          { from: 'usdt-trc20', to: 'card-eur', rate: '0.92' },
+        ];
+        
+        const fallbackRateData: InsertExchangeRate[] = fallbackRates.map(rate => ({
+          id: randomUUID(),
+          fromCurrency: rate.from,
+          toCurrency: rate.to,
+          rate: rate.rate,
+          timestamp: new Date()
+        }));
+        
+        await db.insert(exchangeRates).values(fallbackRateData);
+        console.log('Initialized fallback exchange rates');
       }
     } catch (error) {
-      console.error('Failed to send Telegram notification:', error);
+      console.error('Error initializing fallback rates:', error);
     }
-    
-    return newOrder;
-  }
-
-  async getOrder(id: string): Promise<Order | undefined> {
-    return this.orders.get(id);
-  }
-
-  async updateOrderStatus(id: string, status: string, updates?: Partial<Order>): Promise<Order | undefined> {
-    const order = this.orders.get(id);
-    if (!order) return undefined;
-
-    const updatedOrder = {
-      ...order,
-      status,
-      ...updates,
-      updatedAt: new Date()
-    };
-
-    this.orders.set(id, updatedOrder);
-    return updatedOrder;
-  }
-
-  async getOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values());
-  }
-
-  async getUserOrders(userId: string): Promise<Order[]> {
-    return Array.from(this.orders.values()).filter(order => order.userId === userId);
-  }
-
-  async createKycRequest(request: InsertKycRequest): Promise<KycRequest> {
-    const newRequest: KycRequest = {
-      id: request.id || randomUUID(),
-      status: request.status,
-      orderId: request.orderId,
-      documentType: request.documentType ?? null,
-      documentUrl: request.documentUrl ?? null,
-      reason: request.reason ?? null,
-      createdAt: request.createdAt || new Date(),
-      updatedAt: request.updatedAt || new Date()
-    };
-    
-    this.kycRequests.set(newRequest.id, newRequest);
-    return newRequest;
-  }
-
-  async getKycRequest(orderId: string): Promise<KycRequest | undefined> {
-    return Array.from(this.kycRequests.values()).find(req => req.orderId === orderId);
-  }
-
-  async updateKycRequest(id: string, updates: Partial<KycRequest>): Promise<KycRequest | undefined> {
-    const request = this.kycRequests.get(id);
-    if (!request) return undefined;
-
-    const updatedRequest = {
-      ...request,
-      ...updates,
-      updatedAt: new Date()
-    };
-
-    this.kycRequests.set(id, updatedRequest);
-    return updatedRequest;
-  }
-
-  // User operations - mandatory for Replit Auth
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    if (!userData.id) {
-      throw new Error('User ID is required for upsert operation');
-    }
-
-    const existing = this.users.get(userData.id);
-    
-    if (existing) {
-      // Update existing user
-      const updated: User = {
-        ...existing,
-        email: userData.email ?? existing.email,
-        firstName: userData.firstName ?? existing.firstName,
-        lastName: userData.lastName ?? existing.lastName,
-        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
-        updatedAt: new Date(),
-      };
-      this.users.set(userData.id, updated);
-      return updated;
-    } else {
-      // Create new user
-      const newUser: User = {
-        id: userData.id,
-        email: userData.email ?? null,
-        firstName: userData.firstName ?? null,
-        lastName: userData.lastName ?? null,
-        profileImageUrl: userData.profileImageUrl ?? null,
-        role: 'user',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.users.set(userData.id, newUser);
-      return newUser;
-    }
-  }
-
-  // Additional user operations  
-  async createUser(user: InsertUser): Promise<User> {
-    const newUser: User = {
-      id: randomUUID(),
-      email: user.email ?? null,
-      firstName: user.firstName ?? null,
-      lastName: user.lastName ?? null,
-      profileImageUrl: user.profileImageUrl ?? null,
-      role: user.role || 'user',
-      isActive: user.isActive ?? true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    this.users.set(newUser.id, newUser);
-    return newUser;
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
-  }
-
-  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-
-    const updatedUser = { ...user, ...updates };
-    this.users.set(id, updatedUser);
-    return updatedUser;
-  }
-
-  // Wallet settings operations
-  async getWalletSettings(): Promise<WalletSetting[]> {
-    return Array.from(this.walletSettings.values()).filter(w => w.isActive);
-  }
-
-  async getWalletSetting(currency: string): Promise<WalletSetting | undefined> {
-    return Array.from(this.walletSettings.values()).find(w => w.currency === currency && w.isActive);
-  }
-
-  async createWalletSetting(wallet: InsertWalletSetting): Promise<WalletSetting> {
-    const newWallet: WalletSetting = {
-      id: randomUUID(),
-      currency: wallet.currency,
-      address: wallet.address,
-      network: wallet.network,
-      isActive: wallet.isActive ?? true,
-      createdAt: new Date(),
-      createdBy: wallet.createdBy
-    };
-    
-    this.walletSettings.set(newWallet.id, newWallet);
-    return newWallet;
-  }
-
-  async updateWalletSetting(id: string, updates: Partial<WalletSetting>): Promise<WalletSetting | undefined> {
-    const wallet = this.walletSettings.get(id);
-    if (!wallet) return undefined;
-
-    const updatedWallet = { ...wallet, ...updates };
-    this.walletSettings.set(id, updatedWallet);
-    return updatedWallet;
-  }
-
-  // Platform settings operations
-  async getPlatformSettings(): Promise<PlatformSetting[]> {
-    return Array.from(this.platformSettings.values());
-  }
-
-  async getPlatformSetting(key: string): Promise<PlatformSetting | undefined> {
-    return Array.from(this.platformSettings.values()).find(s => s.key === key);
-  }
-
-  async setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting> {
-    const existing = await this.getPlatformSetting(setting.key);
-    
-    if (existing) {
-      const updated: PlatformSetting = {
-        ...existing,
-        value: setting.value,
-        description: setting.description ?? existing.description,
-        isEncrypted: setting.isEncrypted ?? false,
-        updatedAt: new Date(),
-        updatedBy: setting.updatedBy
-      };
-      this.platformSettings.set(existing.id, updated);
-      return updated;
-    } else {
-      const newSetting: PlatformSetting = {
-        id: randomUUID(),
-        key: setting.key,
-        value: setting.value,
-        description: setting.description ?? null,
-        isEncrypted: setting.isEncrypted ?? false,
-        updatedAt: new Date(),
-        updatedBy: setting.updatedBy
-      };
-      this.platformSettings.set(newSetting.id, newSetting);
-      return newSetting;
-    }
-  }
-
-  private generateDepositAddress(currency: string): string {
-    // Mock address generation based on currency type
-    switch (currency) {
-      case 'btc':
-        return '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'; // Mock BTC address
-      case 'eth':
-      case 'usdt-erc20':
-      case 'usdc':
-        return '0x' + Math.random().toString(16).substring(2, 42).padStart(40, '0'); // Mock ETH address
-      case 'usdt-trc20':
-        return 'T' + Math.random().toString(36).substring(2, 35).toUpperCase(); // Mock TRON address
-      default:
-        return Math.random().toString(36).substring(2, 35);
-    }
-  }
-
-  private maskCardNumber(cardNumber: string): string {
-    const clean = cardNumber.replace(/\D/g, '');
-    return clean.slice(0, 4) + '****' + clean.slice(-4);
-  }
-}
-
-import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
-import { 
-  currencies, 
-  exchangeRates, 
-  orders, 
-  kycRequests, 
-  users, 
-  walletSettings, 
-  platformSettings 
-} from "@shared/schema";
-
-// Database Storage implementation - blueprint:javascript_database  
-export class DatabaseStorage implements IStorage {
-  // User operations - mandatory for Replit Auth
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
-  }
-
-  // Additional user operations  
-  async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
-    return newUser;
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
-  }
-
-  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
-    return user;
   }
 
   // Currency operations
   async getCurrencies(): Promise<Currency[]> {
-    return await db.select().from(currencies);
+    return await db.select().from(currencies).where(eq(currencies.isActive, true));
   }
 
   async getCurrency(id: string): Promise<Currency | undefined> {
-    const [currency] = await db.select().from(currencies).where(eq(currencies.id, id));
-    return currency;
+    const result = await db.select().from(currencies).where(eq(currencies.id, id)).limit(1);
+    return result[0];
   }
 
   async createCurrency(currency: InsertCurrency): Promise<Currency> {
-    const [newCurrency] = await db.insert(currencies).values(currency).returning();
-    return newCurrency;
+    const result = await db.insert(currencies).values(currency).returning();
+    return result[0];
   }
 
-  // Exchange rate operations
+  // Exchange rate operations with caching
   async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate | undefined> {
-    const [rate] = await db.select().from(exchangeRates)
-      .where(sql`${exchangeRates.fromCurrency} = ${fromCurrency} AND ${exchangeRates.toCurrency} = ${toCurrency}`);
-    return rate;
+    const cacheKey = `${fromCurrency}-${toCurrency}`;
+    const cached = this.rateCache.get(cacheKey);
+    
+    // Return cached rate if it's fresh
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+      return cached.rate;
+    }
+    
+    // Get from database
+    const result = await db.select()
+      .from(exchangeRates)
+      .where(and(
+        eq(exchangeRates.fromCurrency, fromCurrency),
+        eq(exchangeRates.toCurrency, toCurrency)
+      ))
+      .orderBy(desc(exchangeRates.timestamp))
+      .limit(1);
+    
+    if (result[0]) {
+      // Update cache
+      this.rateCache.set(cacheKey, {
+        rate: result[0],
+        timestamp: Date.now()
+      });
+      return result[0];
+    }
+    
+    return undefined;
   }
 
   async getLatestRates(): Promise<ExchangeRate[]> {
-    return await db.select().from(exchangeRates);
+    // Return all cached rates if available
+    const cachedRates = Array.from(this.rateCache.values())
+      .filter(cached => (Date.now() - cached.timestamp) < this.CACHE_TTL)
+      .map(cached => cached.rate);
+    
+    if (cachedRates.length > 0) {
+      return cachedRates;
+    }
+    
+    // Otherwise get from database
+    const result = await db.select().from(exchangeRates).orderBy(desc(exchangeRates.timestamp));
+    
+    // Update cache
+    result.forEach(rate => {
+      this.rateCache.set(`${rate.fromCurrency}-${rate.toCurrency}`, {
+        rate,
+        timestamp: Date.now()
+      });
+    });
+    
+    return result;
   }
 
   async createExchangeRate(rate: InsertExchangeRate): Promise<ExchangeRate> {
-    const [newRate] = await db.insert(exchangeRates).values(rate).returning();
-    return newRate;
+    const result = await db.insert(exchangeRates).values(rate).returning();
+    
+    // Update cache
+    this.rateCache.set(`${rate.fromCurrency}-${rate.toCurrency}`, {
+      rate: result[0],
+      timestamp: Date.now()
+    });
+    
+    return result[0];
   }
 
   // Order operations
@@ -684,7 +357,7 @@ export class DatabaseStorage implements IStorage {
     try {
       exchangeRate = await exchangeRateService.getRate(orderRequest.fromCurrency, orderRequest.toCurrency);
     } catch (error) {
-      console.error('Failed to get real-time rate, using fallback:', error);
+      console.error('Failed to get real-time rate, using cached/stored rate:', error);
       const rate = await this.getExchangeRate(orderRequest.fromCurrency, orderRequest.toCurrency);
       exchangeRate = rate ? parseFloat(rate.rate) : 1;
     }
@@ -704,7 +377,7 @@ export class DatabaseStorage implements IStorage {
       };
     }
 
-    const orderData = {
+    const newOrder: InsertOrder = {
       id: orderId,
       userId: orderRequest.userId || null,
       fromCurrency: orderRequest.fromCurrency,
@@ -728,12 +401,12 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date()
     };
 
-    const [newOrder] = await db.insert(orders).values(orderData).returning();
+    const result = await db.insert(orders).values(newOrder).returning();
     
     // Send Telegram notification
     try {
       if (telegramService.isConfigured()) {
-        await telegramService.sendOrderNotification(newOrder);
+        await telegramService.sendOrderNotification(result[0]);
         console.log(`Telegram notification sent for order ${orderId}`);
       } else {
         console.log('Telegram not configured, skipping notification');
@@ -742,68 +415,160 @@ export class DatabaseStorage implements IStorage {
       console.error('Failed to send Telegram notification:', error);
     }
     
-    return newOrder;
+    return result[0];
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
-    const [order] = await db.select().from(orders).where(eq(orders.id, id));
-    return order;
+    const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    return result[0];
   }
 
   async updateOrderStatus(id: string, status: string, updates?: Partial<Order>): Promise<Order | undefined> {
-    const updateData = {
+    const updateData: any = {
       status,
-      ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      ...updates
     };
-    
-    const [order] = await db.update(orders).set(updateData).where(eq(orders.id, id)).returning();
-    return order;
+
+    const result = await db.update(orders)
+      .set(updateData)
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0];
   }
 
   async getOrders(): Promise<Order[]> {
-    return await db.select().from(orders);
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
   async getUserOrders(userId: string): Promise<Order[]> {
-    return await db.select().from(orders).where(eq(orders.userId, userId));
+    return await db.select().from(orders)
+      .where(eq(orders.userId, userId))
+      .orderBy(desc(orders.createdAt));
   }
 
   // KYC operations
   async createKycRequest(request: InsertKycRequest): Promise<KycRequest> {
-    const [newRequest] = await db.insert(kycRequests).values(request).returning();
-    return newRequest;
+    const result = await db.insert(kycRequests).values(request).returning();
+    return result[0];
   }
 
   async getKycRequest(orderId: string): Promise<KycRequest | undefined> {
-    const [request] = await db.select().from(kycRequests).where(eq(kycRequests.orderId, orderId));
-    return request;
+    const result = await db.select().from(kycRequests)
+      .where(eq(kycRequests.orderId, orderId))
+      .limit(1);
+    return result[0];
   }
 
   async updateKycRequest(id: string, updates: Partial<KycRequest>): Promise<KycRequest | undefined> {
-    const [request] = await db.update(kycRequests).set(updates).where(eq(kycRequests.id, id)).returning();
-    return request;
+    const updateData = {
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    const result = await db.update(kycRequests)
+      .set(updateData)
+      .where(eq(kycRequests.id, id))
+      .returning();
+
+    return result[0];
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    if (!userData.id) {
+      throw new Error('User ID is required for upsert operation');
+    }
+
+    const existing = await this.getUser(userData.id);
+    
+    if (existing) {
+      // Update existing user
+      const updateData = {
+        email: userData.email ?? existing.email,
+        firstName: userData.firstName ?? existing.firstName,
+        lastName: userData.lastName ?? existing.lastName,
+        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
+        updatedAt: new Date(),
+      };
+      
+      const result = await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userData.id))
+        .returning();
+      
+      return result[0];
+    } else {
+      // Create new user
+      const newUser = {
+        id: userData.id,
+        email: userData.email ?? null,
+        firstName: userData.firstName ?? null,
+        lastName: userData.lastName ?? null,
+        profileImageUrl: userData.profileImageUrl ?? null,
+        role: 'user',
+        isActive: true,
+      };
+      
+      const result = await db.insert(users).values(newUser).returning();
+      return result[0];
+    }
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const updateData = {
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    const result = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+
+    return result[0];
   }
 
   // Wallet settings operations
   async getWalletSettings(): Promise<WalletSetting[]> {
-    return await db.select().from(walletSettings).where(eq(walletSettings.isActive, true));
+    return await db.select().from(walletSettings);
   }
 
   async getWalletSetting(currency: string): Promise<WalletSetting | undefined> {
-    const [wallet] = await db.select().from(walletSettings)
-      .where(sql`${walletSettings.currency} = ${currency} AND ${walletSettings.isActive} = true`);
-    return wallet;
+    const result = await db.select().from(walletSettings)
+      .where(eq(walletSettings.currency, currency))
+      .limit(1);
+    return result[0];
   }
 
   async createWalletSetting(wallet: InsertWalletSetting): Promise<WalletSetting> {
-    const [newWallet] = await db.insert(walletSettings).values(wallet).returning();
-    return newWallet;
+    const result = await db.insert(walletSettings).values(wallet).returning();
+    return result[0];
   }
 
   async updateWalletSetting(id: string, updates: Partial<WalletSetting>): Promise<WalletSetting | undefined> {
-    const [wallet] = await db.update(walletSettings).set(updates).where(eq(walletSettings.id, id)).returning();
-    return wallet;
+    const result = await db.update(walletSettings)
+      .set(updates)
+      .where(eq(walletSettings.id, id))
+      .returning();
+
+    return result[0];
   }
 
   // Platform settings operations
@@ -812,42 +577,48 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlatformSetting(key: string): Promise<PlatformSetting | undefined> {
-    const [setting] = await db.select().from(platformSettings).where(eq(platformSettings.key, key));
-    return setting;
+    const result = await db.select().from(platformSettings)
+      .where(eq(platformSettings.key, key))
+      .limit(1);
+    return result[0];
   }
 
   async setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting> {
-    const [newSetting] = await db.insert(platformSettings).values(setting)
+    const result = await db.insert(platformSettings)
+      .values(setting)
       .onConflictDoUpdate({
         target: platformSettings.key,
         set: {
           value: setting.value,
+          description: setting.description,
+          isEncrypted: setting.isEncrypted,
           updatedAt: new Date(),
-        },
-      }).returning();
-    return newSetting;
+          updatedBy: setting.updatedBy
+        }
+      })
+      .returning();
+
+    return result[0];
   }
 
+  // Helper methods
   private generateDepositAddress(currency: string): string {
     // Mock address generation based on currency type
-    switch (currency) {
-      case 'btc':
-        return '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'; // Mock BTC address
-      case 'eth':
-      case 'usdt-erc20':
-      case 'usdc':
-        return '0x' + Math.random().toString(16).substring(2, 42).padStart(40, '0'); // Mock ETH address
-      case 'usdt-trc20':
-        return 'T' + Math.random().toString(36).substring(2, 35).toUpperCase(); // Mock TRON address
-      default:
-        return Math.random().toString(36).substring(2, 35);
+    if (currency === 'btc') {
+      return '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+    } else if (currency === 'eth' || currency.includes('erc20')) {
+      return '0x742d35Cc6634C0532925a3b8D0c2AC4B5d4A2c37';
+    } else if (currency.includes('trc20')) {
+      return 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgj3xDT';
     }
+    return 'mock-deposit-address';
   }
 
   private maskCardNumber(cardNumber: string): string {
-    const clean = cardNumber.replace(/\D/g, '');
-    return clean.slice(0, 4) + '****' + clean.slice(-4);
+    if (cardNumber.length < 4) return cardNumber;
+    return '**** **** **** ' + cardNumber.slice(-4);
   }
 }
 
-export const storage = new DatabaseStorage();
+// Export the storage instance
+export const storage = new PostgreSQLStorage();
