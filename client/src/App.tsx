@@ -19,42 +19,32 @@ import Landing from "@/pages/landing";
 import UserDashboard from "@/pages/user-dashboard";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <Switch>
-      {isLoading ? (
-        <Route>
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          </div>
-        </Route>
-      ) : (
-        <>
-          {/* Main exchange page - always accessible */}
-          <Route path="/" component={Home} />
-          <Route path="/exchange" component={Home} />
-          
-          {/* Public pages - accessible by everyone */}
-          <Route path="/order-status" component={OrderStatus} />
-          <Route path="/rates" component={Rates} />
-          <Route path="/support" component={Support} />
-          <Route path="/about" component={About} />
-          
-          {/* User dashboard - only for authenticated users */}
-          {isAuthenticated && (
-            <Route path="/dashboard" component={UserDashboard} />
-          )}
-          
-          {/* Admin pages */}
-          <Route path="/admin/login" component={AdminLoginPage} />
-          {isAuthenticated && (
-            <Route path="/admin" component={AdminPanelPage} />
-          )}
-          
-          <Route component={NotFound} />
-        </>
+      {/* Main exchange page - always accessible */}
+      <Route path="/" component={Home} />
+      <Route path="/exchange" component={Home} />
+      
+      {/* Public pages - accessible by everyone */}
+      <Route path="/order-status" component={OrderStatus} />
+      <Route path="/rates" component={Rates} />
+      <Route path="/support" component={Support} />
+      <Route path="/about" component={About} />
+      
+      {/* User dashboard - only for authenticated users */}
+      {isAuthenticated && (
+        <Route path="/dashboard" component={UserDashboard} />
       )}
+      
+      {/* Admin pages */}
+      <Route path="/admin/login" component={AdminLoginPage} />
+      {isAuthenticated && (
+        <Route path="/admin" component={AdminPanelPage} />
+      )}
+      
+      <Route component={NotFound} />
     </Switch>
   );
 }

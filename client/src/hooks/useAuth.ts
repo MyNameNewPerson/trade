@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { type User } from "@shared/schema";
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
+  const { data: user, isLoading, error } = useQuery<User | null>({
+    queryKey: ["auth-user"],
     queryFn: async () => {
       const res = await fetch("/api/auth/user", {
         credentials: "include",
@@ -28,22 +28,18 @@ export function useAuth() {
       
       return await res.json();
     },
-    retry: (failureCount, error) => {
-      // Don't retry on rate limit errors
-      if (error?.message?.includes('Rate limited')) {
-        return false;
-      }
-      return failureCount < 1;
-    },
-    staleTime: 15 * 60 * 1000, // 15 minutes - longer to reduce requests
-    gcTime: 30 * 60 * 1000, // 30 minutes cache time
+    retry: false, // No retries to prevent infinite requests
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Don't refetch on mount, use cache
+    refetchOnMount: false,
     refetchInterval: false,
+    refetchOnReconnect: false,
+    networkMode: "online",
   });
 
   return {
-    user,
+    user: user || null,
     isLoading,
     isAuthenticated: !!user,
     error
