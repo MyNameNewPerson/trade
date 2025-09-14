@@ -2,10 +2,12 @@ import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LanguageSelector } from "./language-selector";
 import { ThemeToggle } from "./theme-toggle";
+import { AuthProviders } from "./auth-providers";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { User, LogIn, Settings, LogOut } from "lucide-react";
 
 export function Header() {
@@ -105,14 +107,25 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button 
-              onClick={() => window.location.href = '/api/login'}
-              size="sm"
-              data-testid="button-login-header"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Sign In
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  size="sm"
+                  data-testid="button-login-header"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <AuthProviders 
+                  buttonSize="sm" 
+                  layout="vertical"
+                  title="Choose your sign-in method"
+                  showTitle={true}
+                />
+              </PopoverContent>
+            </Popover>
           )}
         </div>
       </div>

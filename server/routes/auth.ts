@@ -4,7 +4,47 @@ import { storage } from '../storage';
 
 const authRouter = Router();
 
-// Get current user info (via Replit Auth session)
+// Unified user endpoint - works with both Replit Auth and OAuth
+authRouter.get('/user', (async (req: AuthRequest, res: Response) => {
+  try {
+    // Check if user is authenticated via session
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user data from session (works for both Replit Auth and OAuth)
+    const sessionUser = req.user as any;
+    if (!sessionUser?.claims?.sub) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
+    // Fetch user from database
+    const userId = sessionUser.claims.sub.toString();
+    const dbUser = await storage.getUser(userId);
+    
+    if (!dbUser || !dbUser.isActive) {
+      return res.status(401).json({ error: 'User not found or inactive' });
+    }
+
+    // Return user data in format expected by frontend
+    res.json({
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      profileImageUrl: dbUser.profileImageUrl,
+      role: dbUser.role,
+      isActive: dbUser.isActive,
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt
+    });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}) as RequestHandler);
+
+// Get current user info (via Replit Auth session) - legacy endpoint
 authRouter.get('/me', authenticateToken as RequestHandler, ((req: AuthRequest, res: Response) => {
   res.json({
     success: true,

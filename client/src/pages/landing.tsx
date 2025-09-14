@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Shield, Zap, Globe, LogIn, Star } from "lucide-react";
+import { ArrowRight, Shield, Zap, Globe, Star } from "lucide-react";
+import { AuthProviders } from "@/components/auth-providers";
 
 export default function Landing() {
   return (
@@ -26,20 +27,29 @@ export default function Landing() {
             and optional KYC compliance. Join thousands of users who trust our platform.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <div className="flex flex-col gap-4">
+              <AuthProviders 
+                buttonSize="lg" 
+                layout="vertical"
+                showTitle={false}
+                className="min-w-[280px]"
+              />
+            </div>
+            
+            <div className="flex items-center">
+              <div className="hidden sm:block w-px h-16 bg-gradient-to-b from-transparent via-gray-300 to-transparent dark:via-gray-600"></div>
+              <span className="sm:hidden text-sm text-gray-400 dark:text-gray-500">or</span>
+            </div>
+            
             <Button 
               size="lg" 
-              onClick={() => window.location.href = '/api/login'} 
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-              data-testid="button-login"
+              variant="outline" 
+              onClick={() => document.getElementById('features')?.scrollIntoView()}
+              className="border-2"
             >
-              <LogIn className="w-5 h-5 mr-2" />
-              Sign In with Google, GitHub & More
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            
-            <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView()}>
               Learn More
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { createOrderSchema } from "@shared/schema";
 import { z } from "zod";
 import { security } from "./middleware/security";
 import { setupAuth, isAuthenticated, requireAdmin } from "./replitAuth";
+import { setupOAuthProviders } from "./oauthProviders";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -15,52 +16,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
   
+  // Setup OAuth providers (Google, GitHub)
+  const baseUrl = process.env.REPLIT_DOMAINS 
+    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+    : 'http://localhost:5000';
+  setupOAuthProviders(app, baseUrl);
+  
   // Apply security middleware
   app.use(security.corsHeaders);
   app.use('/api', security.rateLimiter);
   app.use('/api', security.validateInput);
   
   // WebSocket server for real-time rate updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    perMessageDeflate: false,
+    maxPayload: 1024 * 1024, // 1MB
+  });
   
-  // Store connected clients
-  const clients = new Set<WebSocket>();
+  // Store connected clients with connection info
+  const clients = new Map<WebSocket, { id: string; connectedAt: Date }>();
   
-  wss.on('connection', (ws) => {
-    clients.add(ws);
-    console.log('Client connected to WebSocket');
+  wss.on('connection', (ws, req) => {
+    const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    clients.set(ws, { id: clientId, connectedAt: new Date() });
     
-    // Send initial rates
-    storage.getLatestRates().then(rates => {
+    console.log(`WebSocket client connected: ${clientId} (${clients.size} total)`);
+    
+    // Send initial rates with error handling
+    storage.getLatestRates()
+      .then(rates => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'rates_update',
+            data: rates,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      })
+      .catch(error => {
+        console.error('Error sending initial rates to client:', error);
+      });
+    
+    // Heartbeat ping every 30 seconds to keep connection alive
+    const heartbeatInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'rates_update',
-          data: rates
-        }));
+        ws.ping();
       }
+    }, 30000);
+    
+    ws.on('pong', () => {
+      // Client responded to ping - connection is alive
     });
     
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      clearInterval(heartbeatInterval);
+      const clientInfo = clients.get(ws);
       clients.delete(ws);
-      console.log('Client disconnected from WebSocket');
+      console.log(`WebSocket client disconnected: ${clientInfo?.id || 'unknown'} (code: ${code}, reason: ${reason?.toString() || 'none'}) (${clients.size} remaining)`);
     });
     
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      console.error('WebSocket client error:', error);
+      clearInterval(heartbeatInterval);
+      const clientInfo = clients.get(ws);
       clients.delete(ws);
+      if (clientInfo) {
+        console.log(`Removed error client: ${clientInfo.id}`);
+      }
     });
   });
 
-  // Broadcast rate updates to all connected clients
+  // Broadcast rate updates to all connected clients with error handling
   const broadcastRateUpdate = (rates: any[]) => {
+    if (clients.size === 0) return; // No clients to broadcast to
+    
     const message = JSON.stringify({
       type: 'rates_update',
-      data: rates
+      data: rates,
+      timestamp: new Date().toISOString()
     });
     
-    clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+    const deadClients: WebSocket[] = [];
+    
+    clients.forEach((clientInfo, client) => {
+      try {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        } else {
+          deadClients.push(client);
+        }
+      } catch (error) {
+        console.error(`Error sending message to client ${clientInfo.id}:`, error);
+        deadClients.push(client);
+      }
+    });
+    
+    // Clean up dead connections
+    deadClients.forEach(client => {
+      const clientInfo = clients.get(client);
+      clients.delete(client);
+      if (clientInfo) {
+        console.log(`Cleaned up dead client: ${clientInfo.id}`);
       }
     });
   };
@@ -131,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: order
       });
       
-      clients.forEach(client => {
+      clients.forEach((clientInfo, client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }
@@ -187,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: order
       });
       
-      clients.forEach(client => {
+      clients.forEach((clientInfo, client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }

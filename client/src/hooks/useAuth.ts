@@ -29,12 +29,13 @@ export function useAuth() {
       return await res.json();
     },
     retry: false, // No retries to prevent infinite requests
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes cache time
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchInterval: false,
-    refetchOnReconnect: false,
+    staleTime: 15 * 60 * 1000, // 15 minutes - significantly longer cache time
+    gcTime: 30 * 60 * 1000, // 30 minutes cache time
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    refetchOnMount: false, // Don't refetch on component mount
+    refetchInterval: false, // Disable automatic refetching
+    refetchOnReconnect: false, // Don't refetch when reconnecting
+    refetchIntervalInBackground: false, // Don't refetch in background
     networkMode: "online",
   });
 
