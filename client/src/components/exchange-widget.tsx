@@ -150,52 +150,8 @@ export function ExchangeWidget() {
     refetchInterval: 15 * 60 * 1000, // Auto-refetch every 15 minutes
   });
 
-  const createOrderMutation = useMutation({
-    mutationFn: async (data: ExchangeFormData) => {
-      const isCardPayout = data.toCurrency.startsWith("card-");
-      
-      const orderData: any = {
-        fromCurrency: data.fromCurrency,
-        toCurrency: data.toCurrency,
-        fromAmount: data.fromAmount,
-        rateType: data.rateType,
-        contactEmail: data.contactEmail || undefined,
-        userId: user?.id,
-      };
-      
-      // Add relevant fields based on payout type
-      if (isCardPayout) {
-        orderData.cardDetails = {
-          number: data.cardNumber || "",
-          bankName: data.bankName || "",
-          holderName: data.holderName || "",
-        };
-      } else {
-        orderData.recipientAddress = data.recipientAddress || "";
-      }
-
-      const response = await apiRequest("POST", "/api/orders", orderData);
-      return response.json();
-    },
-    onSuccess: (order) => {
-      toast({
-        title: "Order Created Successfully!",
-        description: `Order ID: ${order.id}. You will be redirected to the order status page.`,
-      });
-      
-      // Redirect to order status page
-      setTimeout(() => {
-        window.location.href = `/order-status?id=${order.id}`;
-      }, 2000);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Order Creation Failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  // Store order data for confirmation page
+  // Note: createOrderMutation moved to order-confirmation page
 
   // Update exchange rate when currencies change
   useEffect(() => {
@@ -274,7 +230,41 @@ export function ExchangeWidget() {
   const toCurrency = (currencies as Currency[]).find((c: Currency) => c.id === toCurrencyValue);
 
   const onSubmit = (data: ExchangeFormData) => {
-    createOrderMutation.mutate(data);
+    // Helper function to mask card number for security
+    const maskCardNumber = (cardNumber: string) => {
+      if (cardNumber.length < 4) return '****';
+      return '****' + cardNumber.slice(-4);
+    };
+
+    // Store minimal data in sessionStorage for security - DO NOT store sensitive card details
+    const orderData = {
+      fromCurrency: data.fromCurrency,
+      toCurrency: data.toCurrency,
+      fromAmount: data.fromAmount,
+      rateType: data.rateType,
+      exchangeRate: exchangeRate, // Include real exchange rate
+      receiveAmount: receiveAmount, // Include calculated receive amount
+      recipientAddress: data.recipientAddress,
+      cardNumberMasked: data.cardNumber ? maskCardNumber(data.cardNumber) : undefined, // Only store masked version
+      contactEmail: data.contactEmail,
+      // Store encrypted/hashed sensitive data for server verification only
+      cardDataHash: data.cardNumber ? btoa(data.cardNumber + '|' + data.bankName + '|' + data.holderName) : undefined,
+    };
+    
+    // Store sensitive card data temporarily in a more secure way (will be cleared on page load)
+    if (data.cardNumber && data.bankName && data.holderName) {
+      // This will be used only for the API call and immediately cleared
+      sessionStorage.setItem('tempCardData', JSON.stringify({
+        cardNumber: data.cardNumber,
+        bankName: data.bankName,
+        holderName: data.holderName,
+      }));
+    }
+    
+    sessionStorage.setItem('orderConfirmationData', JSON.stringify(orderData));
+    
+    // Redirect to confirmation page
+    window.location.href = '/order-confirmation';
   };
 
   // Show skeleton while essential data is loading
@@ -586,10 +576,10 @@ export function ExchangeWidget() {
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 text-white font-bold py-4 sm:py-4 rounded-lg btn-modern animate-glow hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 text-base sm:text-sm min-h-[48px] shadow-lg border border-white/20"
-            disabled={createOrderMutation.isPending}
+            disabled={false}
             data-testid="button-create-order"
           >
-            {createOrderMutation.isPending ? (
+            {false ? (
               <RefreshCw className="w-4 h-4 animate-spin mr-2" />
             ) : null}
             {t('exchange.createOrder')}

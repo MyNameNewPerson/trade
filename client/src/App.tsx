@@ -13,6 +13,7 @@ import ExchangeOnly from "@/pages/exchange-only"; // Main exchange page - clean 
 // Lazy load non-critical pages for better performance
 const Home = lazy(() => import("@/pages/home"));
 const OrderStatus = lazy(() => import("@/pages/order-status"));
+const OrderConfirmation = lazy(() => import("@/pages/order-confirmation"));
 const Rates = lazy(() => import("@/pages/rates"));
 const Support = lazy(() => import("@/pages/support"));
 const About = lazy(() => import("@/pages/about"));
@@ -49,6 +50,7 @@ function Router() {
         <Route path="/landing" component={Landing} />
         
         {/* Public pages - accessible by everyone (lazy loaded) */}
+        <Route path="/order-confirmation" component={OrderConfirmation} />
         <Route path="/order-status" component={OrderStatus} />
         <Route path="/rates" component={Rates} />
         <Route path="/support" component={Support} />
