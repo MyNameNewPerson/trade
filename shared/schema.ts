@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { pgTable, text, varchar, decimal, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -111,6 +111,49 @@ export const platformSettings = pgTable("platform_settings", {
   updatedBy: text("updated_by").notNull(), // admin user id
 });
 
+// Admin logs table - for logging all admin actions
+export const adminLogs = pgTable("admin_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  action: text("action").notNull(), // 'create', 'update', 'delete', 'activate', 'deactivate'
+  target: text("target").notNull(), // 'user', 'wallet', 'currency', 'method', 'telegram'
+  targetId: text("target_id"), // ID of the target object
+  description: text("description").notNull(),
+  metadata: jsonb("metadata"), // Additional data about the action
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Telegram configurations table
+export const telegramConfigs = pgTable("telegram_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Friendly name for the config
+  botToken: text("bot_token").notNull(), // Encrypted token stored here
+  chatId: text("chat_id").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+});
+
+// Exchange methods table
+export const exchangeMethods = pgTable("exchange_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Method name (e.g., "Bank Transfer", "Card Payment")
+  code: text("code").notNull().unique(), // Unique code (e.g., "bank_transfer", "card_payment")
+  type: text("type").notNull(), // 'fiat_in', 'fiat_out', 'crypto_in', 'crypto_out'
+  supportedCurrencies: jsonb("supported_currencies").notNull(), // Array of currency IDs
+  parameters: jsonb("parameters"), // Method-specific parameters (fees, limits, etc.)
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+});
+
 export const insertCurrencySchema = createInsertSchema(currencies);
 export const insertExchangeRateSchema = createInsertSchema(exchangeRates);
 export const insertOrderSchema = createInsertSchema(orders);
@@ -120,6 +163,9 @@ export const upsertUserSchema = createInsertSchema(users).pick({ id: true, email
 export const insertWalletSettingSchema = createInsertSchema(walletSettings).omit({ id: true, createdAt: true });
 export const insertPlatformSettingSchema = createInsertSchema(platformSettings).omit({ id: true, updatedAt: true });
 export const insertEmailTokenSchema = createInsertSchema(emailTokens).omit({ id: true, createdAt: true });
+export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({ id: true, createdAt: true });
+export const insertTelegramConfigSchema = createInsertSchema(telegramConfigs).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertExchangeMethodSchema = createInsertSchema(exchangeMethods).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type Currency = typeof currencies.$inferSelect;
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
@@ -129,6 +175,9 @@ export type User = typeof users.$inferSelect;
 export type WalletSetting = typeof walletSettings.$inferSelect;
 export type PlatformSetting = typeof platformSettings.$inferSelect;
 export type EmailToken = typeof emailTokens.$inferSelect;
+export type AdminLog = typeof adminLogs.$inferSelect;
+export type TelegramConfig = typeof telegramConfigs.$inferSelect;
+export type ExchangeMethod = typeof exchangeMethods.$inferSelect;
 
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
@@ -139,6 +188,9 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertWalletSetting = z.infer<typeof insertWalletSettingSchema>;
 export type InsertPlatformSetting = z.infer<typeof insertPlatformSettingSchema>;
 export type InsertEmailToken = z.infer<typeof insertEmailTokenSchema>;
+export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
+export type InsertTelegramConfig = z.infer<typeof insertTelegramConfigSchema>;
+export type InsertExchangeMethod = z.infer<typeof insertExchangeMethodSchema>;
 
 // Additional validation schemas for API
 export const createOrderSchema = z.object({
@@ -201,3 +253,53 @@ export type CreateUserRequest = z.infer<typeof createUserSchema>;
 export type RegisterRequest = z.infer<typeof registerSchema>;
 export type UpdateWalletRequest = z.infer<typeof updateWalletSchema>;
 export type UpdateSettingRequest = z.infer<typeof updateSettingSchema>;
+
+// Admin panel validation schemas
+export const adminCreateUserSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  role: z.enum(['admin', 'user']),
+  isActive: z.boolean().default(true),
+});
+
+export const adminUpdateUserSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  role: z.enum(['admin', 'user']).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const createTelegramConfigSchema = z.object({
+  name: z.string().min(1),
+  botToken: z.string().min(1),
+  chatId: z.string().min(1),
+  isDefault: z.boolean().default(false),
+  description: z.string().optional(),
+});
+
+export const createExchangeMethodSchema = z.object({
+  name: z.string().min(1),
+  code: z.string().min(1),
+  type: z.enum(['fiat_in', 'fiat_out', 'crypto_in', 'crypto_out']),
+  supportedCurrencies: z.array(z.string()),
+  parameters: z.record(z.any()).optional(),
+  description: z.string().optional(),
+});
+
+export const adminStatsSchema = z.object({
+  totalUsers: z.number(),
+  activeUsers: z.number(),
+  totalOrders: z.number(),
+  completedOrders: z.number(),
+  totalCurrencies: z.number(),
+  activeCurrencies: z.number(),
+  totalWallets: z.number(),
+  activeWallets: z.number(),
+});
+
+export type AdminCreateUserRequest = z.infer<typeof adminCreateUserSchema>;
+export type AdminUpdateUserRequest = z.infer<typeof adminUpdateUserSchema>;
+export type CreateTelegramConfigRequest = z.infer<typeof createTelegramConfigSchema>;
+export type CreateExchangeMethodRequest = z.infer<typeof createExchangeMethodSchema>;
+export type AdminStats = z.infer<typeof adminStatsSchema>;

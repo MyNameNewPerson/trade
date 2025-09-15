@@ -1,10 +1,11 @@
-import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type EmailToken, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type InsertEmailToken, type CreateOrderRequest } from "@shared/schema";
-import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings, emailTokens } from "@shared/schema";
+import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type EmailToken, type AdminLog, type TelegramConfig, type ExchangeMethod, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type InsertEmailToken, type InsertAdminLog, type InsertTelegramConfig, type InsertExchangeMethod, type CreateOrderRequest, type AdminCreateUserRequest, type AdminUpdateUserRequest, type CreateTelegramConfigRequest, type CreateExchangeMethodRequest, type AdminStats } from "@shared/schema";
+import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings, emailTokens, adminLogs, telegramConfigs, exchangeMethods } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { exchangeRateService } from "./services/exchange-api";
 import { telegramService } from "./services/telegram";
+import { encryptionService } from "./services/encryption";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or, like, count } from "drizzle-orm";
 
 export interface IStorage {
   // Currency operations
@@ -52,6 +53,40 @@ export interface IStorage {
   getPlatformSettings(): Promise<PlatformSetting[]>;
   getPlatformSetting(key: string): Promise<PlatformSetting | undefined>;
   setPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting>;
+  
+  // Admin logs operations
+  createAdminLog(log: InsertAdminLog): Promise<AdminLog>;
+  getAdminLogs(page?: number, limit?: number, adminId?: string): Promise<{ logs: AdminLog[], total: number }>;
+  
+  // Telegram configs operations
+  getTelegramConfigs(): Promise<TelegramConfig[]>;
+  getTelegramConfig(id: string): Promise<TelegramConfig | undefined>;
+  createTelegramConfig(config: CreateTelegramConfigRequest, adminId: string): Promise<TelegramConfig>;
+  updateTelegramConfig(id: string, updates: Partial<TelegramConfig>): Promise<TelegramConfig | undefined>;
+  deleteTelegramConfig(id: string): Promise<boolean>;
+  
+  // Exchange methods operations
+  getExchangeMethods(): Promise<ExchangeMethod[]>;
+  getExchangeMethod(id: string): Promise<ExchangeMethod | undefined>;
+  createExchangeMethod(method: CreateExchangeMethodRequest, adminId: string): Promise<ExchangeMethod>;
+  updateExchangeMethod(id: string, updates: Partial<ExchangeMethod>): Promise<ExchangeMethod | undefined>;
+  deleteExchangeMethod(id: string): Promise<boolean>;
+  
+  // Enhanced user operations for admin
+  getAllUsers(page?: number, limit?: number, search?: string): Promise<{ users: User[], total: number }>;
+  adminCreateUser(user: AdminCreateUserRequest): Promise<User>;
+  adminUpdateUser(id: string, updates: AdminUpdateUserRequest): Promise<User | undefined>;
+  deactivateUser(id: string): Promise<boolean>;
+  
+  // Enhanced currency operations for admin
+  updateCurrency(id: string, updates: Partial<Currency>): Promise<Currency | undefined>;
+  deleteCurrency(id: string): Promise<boolean>;
+  
+  // Enhanced wallet operations for admin
+  deleteWalletSetting(id: string): Promise<boolean>;
+  
+  // Stats operations
+  getAdminStats(): Promise<AdminStats>;
 }
 
 export class PostgreSQLStorage implements IStorage {
@@ -665,6 +700,251 @@ export class PostgreSQLStorage implements IStorage {
       .returning();
 
     return result[0];
+  }
+
+  // Admin logs operations
+  async createAdminLog(log: InsertAdminLog): Promise<AdminLog> {
+    const result = await db.insert(adminLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getAdminLogs(page = 1, limit = 50, adminId?: string): Promise<{ logs: AdminLog[], total: number }> {
+    const offset = (page - 1) * limit;
+    
+    const whereClause = adminId ? eq(adminLogs.adminId, adminId) : undefined;
+    
+    const [logs, totalResult] = await Promise.all([
+      db.select()
+        .from(adminLogs)
+        .where(whereClause)
+        .orderBy(desc(adminLogs.createdAt))
+        .offset(offset)
+        .limit(limit),
+      db.select({ count: count() })
+        .from(adminLogs)
+        .where(whereClause)
+    ]);
+    
+    return {
+      logs,
+      total: totalResult[0].count
+    };
+  }
+
+  // Telegram configs operations
+  async getTelegramConfigs(): Promise<TelegramConfig[]> {
+    const configs = await db.select().from(telegramConfigs).orderBy(desc(telegramConfigs.createdAt));
+    
+    // Decrypt bot tokens for API responses
+    return configs.map(config => ({
+      ...config,
+      botToken: encryptionService.decrypt(config.botToken)
+    }));
+  }
+
+  async getTelegramConfig(id: string): Promise<TelegramConfig | undefined> {
+    const result = await db.select().from(telegramConfigs)
+      .where(eq(telegramConfigs.id, id))
+      .limit(1);
+    
+    if (result[0]) {
+      return {
+        ...result[0],
+        botToken: encryptionService.decrypt(result[0].botToken) // Decrypt for API response
+      };
+    }
+    return result[0];
+  }
+
+  async createTelegramConfig(config: CreateTelegramConfigRequest, adminId: string): Promise<TelegramConfig> {
+    const configData: InsertTelegramConfig = {
+      ...config,
+      botToken: encryptionService.encrypt(config.botToken), // Encrypt the bot token
+      createdBy: adminId
+    };
+    
+    const result = await db.insert(telegramConfigs).values(configData).returning();
+    const decryptedResult = {
+      ...result[0],
+      botToken: encryptionService.decrypt(result[0].botToken) // Return decrypted for API response
+    };
+    return decryptedResult;
+  }
+
+  async updateTelegramConfig(id: string, updates: Partial<TelegramConfig>): Promise<TelegramConfig | undefined> {
+    // Encrypt bot token if it's being updated
+    if (updates.botToken) {
+      updates.botToken = encryptionService.encrypt(updates.botToken);
+    }
+    const result = await db.update(telegramConfigs)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(telegramConfigs.id, id))
+      .returning();
+    
+    if (result[0]) {
+      return {
+        ...result[0],
+        botToken: encryptionService.decrypt(result[0].botToken) // Return decrypted
+      };
+    }
+    return result[0];
+  }
+
+  async deleteTelegramConfig(id: string): Promise<boolean> {
+    const result = await db.delete(telegramConfigs)
+      .where(eq(telegramConfigs.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Exchange methods operations
+  async getExchangeMethods(): Promise<ExchangeMethod[]> {
+    return await db.select().from(exchangeMethods).orderBy(desc(exchangeMethods.createdAt));
+  }
+
+  async getExchangeMethod(id: string): Promise<ExchangeMethod | undefined> {
+    const result = await db.select().from(exchangeMethods)
+      .where(eq(exchangeMethods.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createExchangeMethod(method: CreateExchangeMethodRequest, adminId: string): Promise<ExchangeMethod> {
+    const methodData: InsertExchangeMethod = {
+      ...method,
+      createdBy: adminId
+    };
+    
+    const result = await db.insert(exchangeMethods).values(methodData).returning();
+    return result[0];
+  }
+
+  async updateExchangeMethod(id: string, updates: Partial<ExchangeMethod>): Promise<ExchangeMethod | undefined> {
+    const result = await db.update(exchangeMethods)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(exchangeMethods.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteExchangeMethod(id: string): Promise<boolean> {
+    const result = await db.delete(exchangeMethods)
+      .where(eq(exchangeMethods.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Enhanced user operations for admin
+  async getAllUsers(page = 1, limit = 20, search?: string): Promise<{ users: User[], total: number }> {
+    const offset = (page - 1) * limit;
+    
+    const searchFilter = search ? or(
+      like(users.email, `%${search}%`),
+      like(users.firstName, `%${search}%`),
+      like(users.lastName, `%${search}%`)
+    ) : undefined;
+    
+    const [userList, totalResult] = await Promise.all([
+      db.select()
+        .from(users)
+        .where(searchFilter)
+        .orderBy(desc(users.createdAt))
+        .offset(offset)
+        .limit(limit),
+      db.select({ count: count() })
+        .from(users)
+        .where(searchFilter)
+    ]);
+    
+    return {
+      users: userList,
+      total: totalResult[0].count
+    };
+  }
+
+  async adminCreateUser(user: AdminCreateUserRequest): Promise<User> {
+    const userData: InsertUser = {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isActive: user.isActive,
+      password: null // No password for admin-created users
+    };
+    
+    const result = await db.insert(users).values(userData).returning();
+    return result[0];
+  }
+
+  async adminUpdateUser(id: string, updates: AdminUpdateUserRequest): Promise<User | undefined> {
+    const result = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deactivateUser(id: string): Promise<boolean> {
+    const result = await db.update(users)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Enhanced currency operations for admin
+  async updateCurrency(id: string, updates: Partial<Currency>): Promise<Currency | undefined> {
+    const result = await db.update(currencies)
+      .set(updates)
+      .where(eq(currencies.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCurrency(id: string): Promise<boolean> {
+    const result = await db.delete(currencies)
+      .where(eq(currencies.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Enhanced wallet operations for admin
+  async deleteWalletSetting(id: string): Promise<boolean> {
+    const result = await db.delete(walletSettings)
+      .where(eq(walletSettings.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Stats operations
+  async getAdminStats(): Promise<AdminStats> {
+    const [
+      allUsers,
+      allOrders,
+      allCurrencies,
+      allWallets
+    ] = await Promise.all([
+      db.select().from(users),
+      db.select().from(orders),
+      db.select().from(currencies),
+      db.select().from(walletSettings)
+    ]);
+
+    const activeUsers = allUsers.filter(user => user.isActive);
+    const completedOrders = allOrders.filter(order => order.status === 'completed');
+    const activeCurrencies = allCurrencies.filter(currency => currency.isActive);
+    const activeWallets = allWallets.filter(wallet => wallet.isActive);
+
+    return {
+      totalUsers: allUsers.length,
+      activeUsers: activeUsers.length,
+      totalOrders: allOrders.length,
+      completedOrders: completedOrders.length,
+      totalCurrencies: allCurrencies.length,
+      activeCurrencies: activeCurrencies.length,
+      totalWallets: allWallets.length,
+      activeWallets: activeWallets.length
+    };
   }
 
   // Helper methods
