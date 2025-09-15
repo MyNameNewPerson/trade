@@ -22,6 +22,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminLoginPage = lazy(() => import("@/pages/admin-login").then(module => ({ default: module.AdminLoginPage })));
 const AdminDashboardPage = lazy(() => import("@/pages/admin-dashboard").then(module => ({ default: module.AdminDashboardPage })));
 const AdminUsersPage = lazy(() => import("@/pages/admin-users").then(module => ({ default: module.AdminUsersPage })));
+const AdminTelegramPage = lazy(() => import("@/pages/admin-telegram").then(module => ({ default: module.AdminTelegramPage })));
 const Landing = lazy(() => import("@/pages/landing"));
 const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
 const RegisterPage = lazy(() => import("@/pages/register"));
@@ -78,6 +79,13 @@ function Router() {
         <Route path="/admin/users">
           <ProtectedRoute requiredRole="admin">
             <AdminUsersPage />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Admin telegram page - only for admin users */}
+        <Route path="/admin/telegram">
+          <ProtectedRoute requiredRole="admin">
+            <AdminTelegramPage />
           </ProtectedRoute>
         </Route>
         

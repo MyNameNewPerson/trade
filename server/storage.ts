@@ -1,5 +1,5 @@
-import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type EmailToken, type AdminLog, type TelegramConfig, type ExchangeMethod, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type InsertEmailToken, type InsertAdminLog, type InsertTelegramConfig, type InsertExchangeMethod, type CreateOrderRequest, type AdminCreateUserRequest, type AdminUpdateUserRequest, type CreateTelegramConfigRequest, type CreateExchangeMethodRequest, type AdminStats } from "@shared/schema";
-import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings, emailTokens, adminLogs, telegramConfigs, exchangeMethods } from "@shared/schema";
+import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type EmailToken, type AdminLog, type TelegramConfig, type TelegramHistory, type ExchangeMethod, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type InsertEmailToken, type InsertAdminLog, type InsertTelegramConfig, type InsertTelegramHistory, type InsertExchangeMethod, type CreateOrderRequest, type AdminCreateUserRequest, type AdminUpdateUserRequest, type CreateTelegramConfigRequest, type CreateExchangeMethodRequest, type AdminStats, type RevealTokenRequest, type TestConnectionRequest, type TelegramHistoryFilter, type ChatConfig, type NotificationSetting } from "@shared/schema";
+import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings, emailTokens, adminLogs, telegramConfigs, telegramHistory, exchangeMethods } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { exchangeRateService } from "./services/exchange-api";
 import { telegramService } from "./services/telegram";
@@ -58,12 +58,23 @@ export interface IStorage {
   createAdminLog(log: InsertAdminLog): Promise<AdminLog>;
   getAdminLogs(page?: number, limit?: number, adminId?: string): Promise<{ logs: AdminLog[], total: number }>;
   
-  // Telegram configs operations
+  // Telegram configs operations  
   getTelegramConfigs(): Promise<TelegramConfig[]>;
   getTelegramConfig(id: string): Promise<TelegramConfig | undefined>;
   createTelegramConfig(config: CreateTelegramConfigRequest, adminId: string): Promise<TelegramConfig>;
   updateTelegramConfig(id: string, updates: Partial<TelegramConfig>): Promise<TelegramConfig | undefined>;
   deleteTelegramConfig(id: string): Promise<boolean>;
+  
+  // Secure telegram operations
+  revealTelegramToken(request: RevealTokenRequest, adminId: string): Promise<{ token: string; signingSecret: string; expiresIn: number }>;
+  testTelegramConnection(request: TestConnectionRequest): Promise<{ success: boolean; botInfo?: any; error?: string }>;
+  sendTelegramTest(configId: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  getTelegramStatus(): Promise<{ configured: boolean; hasToken: boolean; hasChatId: boolean; hasSigningSecret: boolean; connectionTest?: any }>;
+  
+  // Telegram history operations
+  getTelegramHistory(filters: TelegramHistoryFilter): Promise<{ history: TelegramHistory[]; total: number }>;
+  createTelegramHistory(history: InsertTelegramHistory): Promise<TelegramHistory>;
+  updateTelegramTestStatus(configId: string, status: 'success' | 'failed' | 'pending', error?: string): Promise<void>;
   
   // Exchange methods operations
   getExchangeMethods(): Promise<ExchangeMethod[]>;

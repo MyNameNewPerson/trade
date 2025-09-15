@@ -130,13 +130,34 @@ export const telegramConfigs = pgTable("telegram_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // Friendly name for the config
   botToken: text("bot_token").notNull(), // Encrypted token stored here
-  chatId: text("chat_id").notNull(),
+  signingSecret: text("signing_secret").notNull(), // Encrypted webhook signing secret
+  chatConfigs: jsonb("chat_configs").notNull(), // Array of chat configurations with types
+  notificationSettings: jsonb("notification_settings").notNull().default('[{"type":"newOrders","enabled":true},{"type":"orderStatus","enabled":true},{"type":"payments","enabled":true},{"type":"systemAlerts","enabled":true}]'), // Per-notification routing
   isDefault: boolean("is_default").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   description: text("description"),
+  lastTestAt: timestamp("last_test_at"),
+  lastTestStatus: text("last_test_status"), // 'success', 'failed', 'pending'
+  lastTestError: text("last_test_error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+});
+
+// Telegram notification history table
+export const telegramHistory = pgTable("telegram_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  configId: varchar("config_id").notNull().references(() => telegramConfigs.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // 'newOrders', 'orderStatus', 'payments', 'systemAlerts', 'adminActions'
+  chatId: text("chat_id").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull(), // 'sent', 'failed', 'pending'
+  messageId: text("message_id"), // Telegram message ID if sent successfully
+  errorMessage: text("error_message"),
+  retryCount: text("retry_count").default('0').notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  relatedOrderId: text("related_order_id"), // Optional link to order
+  metadata: jsonb("metadata"), // Additional context data
 });
 
 // Exchange methods table
@@ -164,7 +185,8 @@ export const insertWalletSettingSchema = createInsertSchema(walletSettings).omit
 export const insertPlatformSettingSchema = createInsertSchema(platformSettings).omit({ id: true, updatedAt: true });
 export const insertEmailTokenSchema = createInsertSchema(emailTokens).omit({ id: true, createdAt: true });
 export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({ id: true, createdAt: true });
-export const insertTelegramConfigSchema = createInsertSchema(telegramConfigs).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTelegramConfigSchema = createInsertSchema(telegramConfigs).omit({ id: true, createdAt: true, updatedAt: true, lastTestAt: true, lastTestStatus: true, lastTestError: true });
+export const insertTelegramHistorySchema = createInsertSchema(telegramHistory).omit({ id: true, sentAt: true });
 export const insertExchangeMethodSchema = createInsertSchema(exchangeMethods).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type Currency = typeof currencies.$inferSelect;
@@ -177,6 +199,7 @@ export type PlatformSetting = typeof platformSettings.$inferSelect;
 export type EmailToken = typeof emailTokens.$inferSelect;
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type TelegramConfig = typeof telegramConfigs.$inferSelect;
+export type TelegramHistory = typeof telegramHistory.$inferSelect;
 export type ExchangeMethod = typeof exchangeMethods.$inferSelect;
 
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
@@ -190,6 +213,7 @@ export type InsertPlatformSetting = z.infer<typeof insertPlatformSettingSchema>;
 export type InsertEmailToken = z.infer<typeof insertEmailTokenSchema>;
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
 export type InsertTelegramConfig = z.infer<typeof insertTelegramConfigSchema>;
+export type InsertTelegramHistory = z.infer<typeof insertTelegramHistorySchema>;
 export type InsertExchangeMethod = z.infer<typeof insertExchangeMethodSchema>;
 
 // Additional validation schemas for API
@@ -270,12 +294,58 @@ export const adminUpdateUserSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+// Chat configuration schema
+export const chatConfigSchema = z.object({
+  id: z.string().min(1), // Chat ID or @username
+  type: z.enum(['private', 'group', 'supergroup', 'channel']),
+  name: z.string().optional(), // Display name for UI
+  enabled: z.boolean().default(true),
+});
+
+// Notification settings schema
+export const notificationSettingSchema = z.object({
+  type: z.enum(['newOrders', 'orderStatus', 'payments', 'systemAlerts', 'adminActions']),
+  enabled: z.boolean(),
+  chatId: z.string().optional(), // Specific chat for this notification type
+});
+
 export const createTelegramConfigSchema = z.object({
   name: z.string().min(1),
   botToken: z.string().min(1),
-  chatId: z.string().min(1),
+  signingSecret: z.string().min(1),
+  chatConfigs: z.array(chatConfigSchema).min(1),
+  notificationSettings: z.array(notificationSettingSchema).default([
+    { type: 'newOrders', enabled: true },
+    { type: 'orderStatus', enabled: true },
+    { type: 'payments', enabled: true },
+    { type: 'systemAlerts', enabled: true },
+    { type: 'adminActions', enabled: false }
+  ]),
   isDefault: z.boolean().default(false),
   description: z.string().optional(),
+});
+
+// Secure token reveal schema
+export const revealTokenSchema = z.object({
+  configId: z.string().min(1),
+  adminPassword: z.string().min(1),
+});
+
+// Test connection schema
+export const testConnectionSchema = z.object({
+  configId: z.string().min(1),
+  testMessage: z.string().optional(),
+});
+
+// Telegram history filter schema
+export const telegramHistoryFilterSchema = z.object({
+  search: z.string().optional(),
+  type: z.enum(['all', 'newOrders', 'orderStatus', 'payments', 'systemAlerts', 'adminActions']).default('all'),
+  status: z.enum(['all', 'sent', 'failed', 'pending']).default('all'),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  page: z.number().min(1).default(1),
+  limit: z.number().min(1).max(100).default(20),
 });
 
 export const createExchangeMethodSchema = z.object({
@@ -301,5 +371,10 @@ export const adminStatsSchema = z.object({
 export type AdminCreateUserRequest = z.infer<typeof adminCreateUserSchema>;
 export type AdminUpdateUserRequest = z.infer<typeof adminUpdateUserSchema>;
 export type CreateTelegramConfigRequest = z.infer<typeof createTelegramConfigSchema>;
+export type ChatConfig = z.infer<typeof chatConfigSchema>;
+export type NotificationSetting = z.infer<typeof notificationSettingSchema>;
+export type RevealTokenRequest = z.infer<typeof revealTokenSchema>;
+export type TestConnectionRequest = z.infer<typeof testConnectionSchema>;
+export type TelegramHistoryFilter = z.infer<typeof telegramHistoryFilterSchema>;
 export type CreateExchangeMethodRequest = z.infer<typeof createExchangeMethodSchema>;
 export type AdminStats = z.infer<typeof adminStatsSchema>;
