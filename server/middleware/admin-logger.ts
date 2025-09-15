@@ -123,8 +123,8 @@ export const AdminActions = {
 
 export const AdminTargets = {
   USER: 'user',
-  WALLET: 'wallet',
   CURRENCY: 'currency',
+  WALLET: 'wallet',
   TELEGRAM: 'telegram',
   EXCHANGE_METHOD: 'exchange_method',
   PLATFORM_SETTING: 'platform_setting'

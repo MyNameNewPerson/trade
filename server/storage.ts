@@ -90,6 +90,7 @@ export interface IStorage {
   deactivateUser(id: string): Promise<boolean>;
   
   // Enhanced currency operations for admin
+  getAllCurrencies(): Promise<Currency[]>;
   updateCurrency(id: string, updates: Partial<Currency>): Promise<Currency | undefined>;
   deleteCurrency(id: string): Promise<boolean>;
   
@@ -904,6 +905,11 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   // Enhanced currency operations for admin
+  async getAllCurrencies(): Promise<Currency[]> {
+    // Admin can see all currencies including inactive ones
+    return await db.select().from(currencies).orderBy(currencies.id);
+  }
+
   async updateCurrency(id: string, updates: Partial<Currency>): Promise<Currency | undefined> {
     const result = await db.update(currencies)
       .set(updates)

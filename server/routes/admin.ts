@@ -917,6 +917,176 @@ adminRouter.delete('/currencies/:id',
 );
 
 // =====================
+// CURRENCIES MANAGEMENT - SECURE
+// =====================
+
+// Get all currencies (with inactive ones for admin)
+adminRouter.get('/currencies',
+  logAdminAction('list_currencies', AdminTargets.CURRENCY, 'Admin viewed currencies list'),
+  (async (req: AuthRequest, res: Response) => {
+  try {
+    // Admin can see all currencies including inactive ones
+    const currencies = await storage.getAllCurrencies();
+    res.json(currencies);
+  } catch (error) {
+    console.error('Get currencies error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+}) as RequestHandler);
+
+// Get specific currency
+adminRouter.get('/currencies/:id',
+  logAdminAction('view_currency', AdminTargets.CURRENCY, 'Admin viewed currency details'),
+  (async (req: AuthRequest, res: Response) => {
+  try {
+    const currency = await storage.getCurrency(req.params.id);
+    if (!currency) {
+      return res.status(404).json({
+        success: false,
+        error: 'Currency not found',
+      });
+    }
+
+    res.json(currency);
+  } catch (error) {
+    console.error('Get currency error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+}) as RequestHandler);
+
+// Create new currency
+adminRouter.post('/currencies', 
+  logAdminAction(AdminActions.CREATE_CURRENCY, AdminTargets.CURRENCY, 'Admin created new currency'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const validatedData = insertCurrencySchema.parse(req.body);
+      
+      // Check if currency with same ID already exists
+      const existingCurrency = await storage.getCurrency(validatedData.id);
+      if (existingCurrency) {
+        return res.status(409).json({
+          success: false,
+          error: 'Currency with this ID already exists',
+        });
+      }
+      
+      const newCurrency = await storage.createCurrency(validatedData);
+      updateAdminLogTargetId(req, newCurrency.id);
+      
+      res.status(201).json(newCurrency);
+    } catch (error) {
+      console.error('Create currency error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid input data',
+          details: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Update currency
+adminRouter.put('/currencies/:id',
+  logAdminAction(AdminActions.UPDATE_CURRENCY, AdminTargets.CURRENCY, 'Admin updated currency'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const validatedData = insertCurrencySchema.partial().parse(req.body);
+      
+      const updatedCurrency = await storage.updateCurrency(req.params.id, validatedData);
+      if (!updatedCurrency) {
+        return res.status(404).json({
+          success: false,
+          error: 'Currency not found',
+        });
+      }
+
+      res.json(updatedCurrency);
+    } catch (error) {
+      console.error('Update currency error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid input data',
+          details: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Delete currency (soft delete - set inactive)
+adminRouter.delete('/currencies/:id',
+  logAdminAction(AdminActions.DELETE_CURRENCY, AdminTargets.CURRENCY, 'Admin deleted currency'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const success = await storage.deleteCurrency(req.params.id);
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          error: 'Currency not found',
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete currency error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Toggle currency active status
+adminRouter.patch('/currencies/:id/toggle',
+  logAdminAction(AdminActions.UPDATE_CURRENCY, AdminTargets.CURRENCY, 'Admin toggled currency status'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const currency = await storage.getCurrency(req.params.id);
+      if (!currency) {
+        return res.status(404).json({
+          success: false,
+          error: 'Currency not found',
+        });
+      }
+
+      const updatedCurrency = await storage.updateCurrency(req.params.id, {
+        isActive: !currency.isActive
+      });
+
+      res.json(updatedCurrency);
+    } catch (error) {
+      console.error('Toggle currency status error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }) as RequestHandler
+);
+
+// =====================
 // EXCHANGE METHODS MANAGEMENT
 // =====================
 
