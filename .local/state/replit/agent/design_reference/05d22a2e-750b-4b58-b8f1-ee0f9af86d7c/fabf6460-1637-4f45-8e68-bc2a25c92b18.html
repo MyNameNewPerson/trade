@@ -1,0 +1,914 @@
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoFlow Exchange - Secure Cryptocurrency Exchange Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["Inter", "system-ui", "sans-serif"],
+                },
+                animation: {
+                    'fade-in': 'fadeIn 0.5s ease-in-out',
+                    'slide-up': 'slideUp 0.3s ease-out',
+                    'pulse-slow': 'pulse 3s infinite',
+                }
+            },
+        },
+    };
+    </script>
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(221.2 83.2% 53.3%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 84% 4.9%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(221.2 83.2% 53.3%);
+            --radius: 0.75rem;
+        }
+        
+        .dark {
+            --background: hsl(222.2 84% 4.9%);
+            --foreground: hsl(210 40% 98%);
+            --card: hsl(222.2 84% 4.9%);
+            --card-foreground: hsl(210 40% 98%);
+            --popover: hsl(222.2 84% 4.9%);
+            --popover-foreground: hsl(210 40% 98%);
+            --primary: hsl(217.2 91.2% 59.8%);
+            --primary-foreground: hsl(222.2 84% 4.9%);
+            --secondary: hsl(217.2 32.6% 17.5%);
+            --secondary-foreground: hsl(210 40% 98%);
+            --muted: hsl(217.2 32.6% 17.5%);
+            --muted-foreground: hsl(215 20.2% 65.1%);
+            --accent: hsl(217.2 32.6% 17.5%);
+            --accent-foreground: hsl(210 40% 98%);
+            --destructive: hsl(0 62.8% 30.6%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(217.2 32.6% 17.5%);
+            --input: hsl(217.2 32.6% 17.5%);
+            --ring: hsl(224.3 76.3% 94.1%);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .dark .glassmorphism {
+            background: rgba(15, 23, 42, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #581c87 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground font-sans antialiased transition-colors duration-300">
+    <!-- @COMPONENT: Header [navigation with language selector and theme toggle] -->
+    <header class="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div class="container mx-auto flex h-16 items-center justify-between px-4">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">CF</span>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">CryptoFlow</span>
+                </div>
+                <nav class="hidden md:flex space-x-6">
+                    <a href="#exchange" class="text-foreground hover:text-primary transition-colors">Exchange</a>
+                    <a href="#rates" class="text-muted-foreground hover:text-primary transition-colors">Rates</a>
+                    <a href="#about" class="text-muted-foreground hover:text-primary transition-colors">About</a>
+                    <a href="#support" class="text-muted-foreground hover:text-primary transition-colors">Support</a>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <!-- Language Selector -->
+                <select class="bg-card border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                    <option value="ro">🇲🇩 Română</option>
+                </select>
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-md hover:bg-accent transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </button>
+                <button class="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors">
+                    Track Order
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: Hero Section [main exchange interface] -->
+    <main class="min-h-screen gradient-bg">
+        <div class="container mx-auto px-4 py-12">
+            <!-- Hero Content -->
+            <div class="text-center mb-12 text-white">
+                <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+                    Secure Cryptocurrency Exchange
+                </h1>
+                <p class="text-xl md:text-2xl mb-8 text-white/80 animate-slide-up">
+                    Fast, secure, and anonymous crypto-to-crypto and crypto-to-fiat exchanges
+                </p>
+                <div class="flex flex-wrap justify-center gap-6 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>24/7 Support</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>No Registration Required</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>Best Exchange Rates</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- @COMPONENT: Exchange Widget [main exchange form] -->
+            <div class="max-w-2xl mx-auto glassmorphism rounded-2xl p-8 shadow-2xl animate-slide-up">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Exchange</h2>
+                    <div class="flex space-x-2">
+                        <button id="fixed-rate-btn" class="px-4 py-2 rounded-lg bg-white/20 text-white text-sm font-medium transition-all hover:bg-white/30 active">
+                            Fixed Rate
+                        </button>
+                        <button id="float-rate-btn" class="px-4 py-2 rounded-lg text-white/70 text-sm font-medium transition-all hover:bg-white/20">
+                            Float Rate
+                        </button>
+                    </div>
+                </div>
+
+                <form id="exchange-form" class="space-y-6">
+                    <!-- Send Currency -->
+                    <div class="space-y-2">
+                        <label class="text-white/80 text-sm font-medium">You send</label>
+                        <div class="flex space-x-3">
+                            <div class="flex-1">
+                                <input 
+                                    type="number" 
+                                    id="send-amount" 
+                                    placeholder="0.00" 
+                                    class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                                    data-bind="exchangeForm.sendAmount"
+                                />
+                            </div>
+                            <div class="relative">
+                                <select id="send-currency" class="appearance-none bg-white/10 border border-white/20 rounded-lg px-4 py-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-white/30 min-w-[140px]">
+                                    <option value="btc" data-mock="true">BTC</option>
+                                    <option value="eth" data-mock="true">ETH</option>
+                                    <option value="usdt-trc20" data-mock="true" selected>USDT TRC20</option>
+                                    <option value="usdt-erc20" data-mock="true">USDT ERC20</option>
+                                    <option value="usdc" data-mock="true">USDC</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-white/60">
+                            Min: <span data-bind="limits.min">50 USDT</span> • Max: <span data-bind="limits.max">50,000 USDT</span>
+                        </div>
+                    </div>
+
+                    <!-- Exchange Direction Indicator -->
+                    <div class="flex justify-center">
+                        <button type="button" id="swap-currencies" class="p-3 rounded-full bg-white/20 hover:bg-white/30 transition-all transform hover:scale-110">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Receive Currency -->
+                    <div class="space-y-2">
+                        <label class="text-white/80 text-sm font-medium">You receive</label>
+                        <div class="flex space-x-3">
+                            <div class="flex-1">
+                                <input 
+                                    type="number" 
+                                    id="receive-amount" 
+                                    placeholder="0.00" 
+                                    class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                                    data-bind="exchangeForm.receiveAmount"
+                                    readonly
+                                />
+                            </div>
+                            <div class="relative">
+                                <select id="receive-currency" class="appearance-none bg-white/10 border border-white/20 rounded-lg px-4 py-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-white/30 min-w-[140px]">
+                                    <option value="card-mdl" data-mock="true" selected>MDL Card</option>
+                                    <option value="card-usd" data-mock="true">USD Card</option>
+                                    <option value="card-eur" data-mock="true">EUR Card</option>
+                                    <option value="btc" data-mock="true">BTC</option>
+                                    <option value="eth" data-mock="true">ETH</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exchange Rate Info -->
+                    <div class="bg-white/10 rounded-lg p-4 space-y-2">
+                        <div class="flex justify-between text-sm text-white/80">
+                            <span>Exchange Rate:</span>
+                            <span data-bind="exchangeRate.current">1 USDT = 16.16 MDL</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-white/80">
+                            <span>Platform Fee:</span>
+                            <span data-bind="fees.platform">0.5%</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-white/80">
+                            <span>Network Fee:</span>
+                            <span data-bind="fees.network">~2 USDT</span>
+                        </div>
+                        <div id="fixed-rate-info" class="flex justify-between text-sm text-white/80">
+                            <span>Rate locked for:</span>
+                            <span data-bind="ratelock.timeRemaining" class="font-medium">10:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Payout Details (shown when card is selected) -->
+                    <div id="card-details" class="space-y-4 bg-white/5 rounded-lg p-4">
+                        <h3 class="text-white font-medium">Card Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <input 
+                                    type="text" 
+                                    placeholder="Card Number (4111 1111 1111 1111)" 
+                                    class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                                    data-bind="cardDetails.number"
+                                />
+                            </div>
+                            <div>
+                                <input 
+                                    type="text" 
+                                    placeholder="Bank Name" 
+                                    class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                                    data-bind="cardDetails.bankName"
+                                />
+                            </div>
+                            <div class="md:col-span-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="Card Holder Name" 
+                                    class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                                    data-bind="cardDetails.holderName"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="space-y-4">
+                        <div>
+                            <input 
+                                type="email" 
+                                placeholder="Email (optional)" 
+                                class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                                data-bind="contactInfo.email"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Terms and Conditions -->
+                    <div class="flex items-start space-x-3">
+                        <input 
+                            type="checkbox" 
+                            id="terms" 
+                            class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-primary focus:ring-white/30"
+                            required
+                        />
+                        <label for="terms" class="text-sm text-white/80 leading-relaxed">
+                            I agree to the <a href="#" class="text-white underline hover:text-white/80">Terms of Service</a> and <a href="#" class="text-white underline hover:text-white/80">AML Policy</a>. I understand that this exchange may require additional verification for compliance purposes.
+                        </label>
+                    </div>
+
+                    <!-- Exchange Button -->
+                    <button 
+                        type="submit" 
+                        class="w-full bg-white text-primary font-semibold py-4 rounded-lg hover:bg-white/90 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-event="click:handleExchange"
+                    >
+                        Create Exchange Order
+                    </button>
+                </form>
+            </div>
+            <!-- @END_COMPONENT: Exchange Widget -->
+        </div>
+    </main>
+    <!-- @END_COMPONENT: Hero Section -->
+
+    <!-- @COMPONENT: Features Section [trust indicators and features] -->
+    <section class="py-20 bg-background">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-6">Why Choose CryptoFlow?</h2>
+                <p class="text-muted-foreground text-lg max-w-2xl mx-auto">
+                    We provide secure, fast, and reliable cryptocurrency exchange services with the best rates in the market.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold">Secure & Safe</h3>
+                    <p class="text-muted-foreground">Advanced security measures and AML compliance to protect your funds.</p>
+                </div>
+
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold">Lightning Fast</h3>
+                    <p class="text-muted-foreground">Most exchanges completed within 5-30 minutes automatically.</p>
+                </div>
+
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold">No Registration</h3>
+                    <p class="text-muted-foreground">Start exchanging immediately without lengthy registration processes.</p>
+                </div>
+
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold">24/7 Support</h3>
+                    <p class="text-muted-foreground">Round-the-clock customer support to assist with your exchanges.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Features Section -->
+
+    <!-- @COMPONENT: Supported Currencies Section [display available currencies] -->
+    <section class="py-20 bg-muted/30">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-6">Supported Currencies</h2>
+                <p class="text-muted-foreground text-lg">
+                    We support major cryptocurrencies and fiat payouts to bank cards
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <!-- @MAP: supportedCurrencies.map(currency => ( -->
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- Bitcoin logo from Unsplash representing cryptocurrency -->
+                    <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Bitcoin" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">Bitcoin</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">BTC</p>
+                </div>
+
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- Ethereum logo representation -->
+                    <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Ethereum" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">Ethereum</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">ETH</p>
+                </div>
+
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- Tether USDT representation -->
+                    <img src="https://images.unsplash.com/photo-1621761191319-c6fb62004040?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="USDT" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">USDT TRC20</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">USDT</p>
+                </div>
+
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- USDC representation -->
+                    <img src="https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="USDC" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">USDC</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">USDC</p>
+                </div>
+
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- Bank card representation -->
+                    <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="Bank Card" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">Visa/MC MDL</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">MDL</p>
+                </div>
+
+                <div class="bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105">
+                    <!-- USD card representation -->
+                    <img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="USD Card" class="w-12 h-12 mx-auto mb-3 rounded-full" data-mock="true" />
+                    <h3 class="font-semibold text-sm" data-mock="true">Visa/MC USD</h3>
+                    <p class="text-xs text-muted-foreground" data-mock="true">USD</p>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Supported Currencies Section -->
+
+    <!-- @COMPONENT: Order Tracking Section [track order status] -->
+    <section id="order-tracking" class="py-20 bg-background hidden">
+        <div class="container mx-auto px-4 max-w-4xl">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-6">Track Your Order</h2>
+                <p class="text-muted-foreground text-lg">
+                    Monitor your exchange progress in real-time
+                </p>
+            </div>
+
+            <!-- Order Lookup -->
+            <div class="bg-card rounded-2xl p-8 shadow-lg mb-8">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input 
+                        type="text" 
+                        placeholder="Enter your order ID (e.g., CF-ABCD1234)" 
+                        class="flex-1 bg-input border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ring"
+                        id="order-lookup-input"
+                    />
+                    <button 
+                        id="track-order-btn"
+                        class="bg-primary text-primary-foreground px-8 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    >
+                        Track Order
+                    </button>
+                </div>
+            </div>
+
+            <!-- Order Status Display -->
+            <div id="order-status" class="bg-card rounded-2xl p-8 shadow-lg hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-2xl font-bold">Order #<span data-bind="order.id" data-mock="true">CF-ABCD1234</span></h3>
+                        <span class="px-4 py-2 rounded-full text-sm font-medium bg-primary/10 text-primary" data-bind="order.status" data-mock="true">
+                            Awaiting Deposit
+                        </span>
+                    </div>
+                    
+                    <!-- Progress Steps -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">1</div>
+                            <span class="ml-2 text-sm">Order Created</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-border mx-4"></div>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium animate-pulse">2</div>
+                            <span class="ml-2 text-sm">Awaiting Payment</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-border mx-4"></div>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">3</div>
+                            <span class="ml-2 text-sm">Processing</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-border mx-4"></div>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">4</div>
+                            <span class="ml-2 text-sm">Completed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Details -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold">Exchange Details</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">You Send:</span>
+                                <span class="font-medium" data-bind="order.sendAmount" data-mock="true">100 USDT TRC20</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">You Receive:</span>
+                                <span class="font-medium" data-bind="order.receiveAmount" data-mock="true">1,616 MDL</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">Exchange Rate:</span>
+                                <span class="font-medium" data-bind="order.rate" data-mock="true">1 USDT = 16.16 MDL</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">Fee:</span>
+                                <span class="font-medium" data-bind="order.fee" data-mock="true">0.5 USDT</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold">Payment Information</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <span class="text-muted-foreground text-sm">Deposit Address:</span>
+                                <div class="bg-muted/50 rounded-lg p-3 mt-1">
+                                    <code class="text-sm font-mono break-all" data-bind="order.depositAddress" data-mock="true">
+                                        TQrfqhMkVsqKZJzZGhAR8F9oQNbcCpA3kQ
+                                    </code>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-muted-foreground text-sm">Payout Details:</span>
+                                <div class="bg-muted/50 rounded-lg p-3 mt-1">
+                                    <span class="text-sm" data-bind="order.payoutDetails" data-mock="true">
+                                        Card: ****1234 (Moldova Agroindbank)
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-sm text-muted-foreground">
+                                <strong>Time remaining:</strong> <span data-bind="order.timeRemaining" data-mock="true">9:45</span> (Fixed rate)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-border">
+                    <button class="flex-1 bg-secondary text-secondary-foreground py-3 rounded-lg font-medium hover:bg-secondary/80 transition-colors">
+                        Copy Deposit Address
+                    </button>
+                    <button class="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                        Contact Support
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Order Tracking Section -->
+
+    <!-- @COMPONENT: Footer [links and contact info] -->
+    <footer class="bg-muted/30 py-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                            <span class="text-white font-bold text-sm">CF</span>
+                        </div>
+                        <span class="text-xl font-bold">CryptoFlow</span>
+                    </div>
+                    <p class="text-muted-foreground text-sm">
+                        Secure and reliable cryptocurrency exchange platform with the best rates and 24/7 support.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold mb-4">Services</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Crypto Exchange</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Card Payouts</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Fixed Rate</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Float Rate</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold mb-4">Support</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Contact Us</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Track Order</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">API Documentation</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">AML Policy</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">KYC Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-sm text-muted-foreground">
+                    © 2024 CryptoFlow. All rights reserved.
+                </p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">
+                        <span class="sr-only">Twitter</span>
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                    </a>
+                    <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">
+                        <span class="sr-only">Telegram</span>
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- @END_COMPONENT: Footer -->
+
+    <!-- Chat Widget -->
+    <!-- @COMPONENT: SupportChat [floating support chat widget] -->
+    <div id="chat-widget" class="fixed bottom-6 right-6 z-50">
+        <button id="chat-toggle" class="bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+        </button>
+        
+        <div id="chat-panel" class="absolute bottom-16 right-0 w-80 bg-card rounded-2xl shadow-2xl border border-border hidden">
+            <div class="p-4 border-b border-border">
+                <h3 class="font-semibold">Support Chat</h3>
+                <p class="text-sm text-muted-foreground">We're here to help 24/7</p>
+            </div>
+            <div class="p-4 h-64 overflow-y-auto space-y-3">
+                <div class="bg-muted/50 rounded-lg p-3 text-sm">
+                    <strong>Support:</strong> Hello! How can I help you today?
+                </div>
+            </div>
+            <div class="p-4 border-t border-border">
+                <div class="flex space-x-2">
+                    <input type="text" placeholder="Type your message..." class="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <button class="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: SupportChat -->
+
+    <script>
+        (function() {
+            // Theme toggle functionality
+            const themeToggle = document.getElementById('theme-toggle');
+            const htmlElement = document.documentElement;
+            
+            themeToggle.addEventListener('click', () => {
+                htmlElement.classList.toggle('dark');
+                localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+            });
+
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                htmlElement.classList.add('dark');
+            }
+
+            // Exchange rate mode toggle
+            const fixedRateBtn = document.getElementById('fixed-rate-btn');
+            const floatRateBtn = document.getElementById('float-rate-btn');
+            const fixedRateInfo = document.getElementById('fixed-rate-info');
+
+            fixedRateBtn.addEventListener('click', () => {
+                fixedRateBtn.classList.add('bg-white/20');
+                floatRateBtn.classList.remove('bg-white/20');
+                floatRateBtn.classList.add('text-white/70');
+                fixedRateBtn.classList.remove('text-white/70');
+                fixedRateInfo.style.display = 'flex';
+            });
+
+            floatRateBtn.addEventListener('click', () => {
+                floatRateBtn.classList.add('bg-white/20');
+                fixedRateBtn.classList.remove('bg-white/20');
+                fixedRateBtn.classList.add('text-white/70');
+                floatRateBtn.classList.remove('text-white/70');
+                fixedRateInfo.style.display = 'none';
+            });
+
+            // Currency swap functionality
+            const swapBtn = document.getElementById('swap-currencies');
+            const sendCurrency = document.getElementById('send-currency');
+            const receiveCurrency = document.getElementById('receive-currency');
+
+            swapBtn.addEventListener('click', () => {
+                const tempValue = sendCurrency.value;
+                sendCurrency.value = receiveCurrency.value;
+                receiveCurrency.value = tempValue;
+                // TODO: Recalculate exchange rates and amounts
+            });
+
+            // Show/hide card details based on receive currency
+            const cardDetails = document.getElementById('card-details');
+            
+            receiveCurrency.addEventListener('change', () => {
+                if (receiveCurrency.value.startsWith('card-')) {
+                    cardDetails.style.display = 'block';
+                } else {
+                    cardDetails.style.display = 'none';
+                }
+            });
+
+            // Exchange form submission
+            const exchangeForm = document.getElementById('exchange-form');
+            
+            exchangeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // TODO: Implement exchange order creation
+                // - Validate form data
+                // - Create order via API
+                // - Redirect to order status page
+                
+                // Mock order creation
+                const orderId = 'CF-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+                
+                // Show order tracking section (mock)
+                const orderTrackingSection = document.getElementById('order-tracking');
+                const orderStatus = document.getElementById('order-status');
+                
+                orderTrackingSection.classList.remove('hidden');
+                orderStatus.classList.remove('hidden');
+                
+                // Scroll to order tracking
+                orderTrackingSection.scrollIntoView({ behavior: 'smooth' });
+                
+                alert(`Order created successfully! Order ID: ${orderId}`);
+            });
+
+            // Order tracking functionality
+            const trackOrderBtn = document.getElementById('track-order-btn');
+            const orderLookupInput = document.getElementById('order-lookup-input');
+            
+            trackOrderBtn.addEventListener('click', () => {
+                const orderId = orderLookupInput.value.trim();
+                
+                if (!orderId) {
+                    alert('Please enter an order ID');
+                    return;
+                }
+                
+                // TODO: Implement order lookup via API
+                // Mock order lookup
+                const orderStatus = document.getElementById('order-status');
+                orderStatus.classList.remove('hidden');
+            });
+
+            // Chat widget functionality
+            const chatToggle = document.getElementById('chat-toggle');
+            const chatPanel = document.getElementById('chat-panel');
+            
+            chatToggle.addEventListener('click', () => {
+                chatPanel.classList.toggle('hidden');
+            });
+
+            // Mock real-time rate updates
+            let currentRate = 16.16;
+            
+            function updateExchangeRate() {
+                // Simulate rate fluctuation
+                const fluctuation = (Math.random() - 0.5) * 0.1;
+                currentRate += fluctuation;
+                currentRate = Math.max(15.5, Math.min(16.8, currentRate)); // Keep within reasonable bounds
+                
+                const rateElements = document.querySelectorAll('[data-bind="exchangeRate.current"]');
+                rateElements.forEach(el => {
+                    el.textContent = `1 USDT = ${currentRate.toFixed(2)} MDL`;
+                });
+                
+                // TODO: Update all dependent calculations (receive amount, fees, etc.)
+            }
+            
+            // Update rate every 5 seconds
+            setInterval(updateExchangeRate, 5000);
+
+            // Mock countdown timer for fixed rate
+            let timeRemaining = 600; // 10 minutes in seconds
+            
+            function updateCountdown() {
+                if (timeRemaining > 0) {
+                    const minutes = Math.floor(timeRemaining / 60);
+                    const seconds = timeRemaining % 60;
+                    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    const timerElements = document.querySelectorAll('[data-bind="ratelock.timeRemaining"]');
+                    timerElements.forEach(el => {
+                        el.textContent = timeString;
+                    });
+                    
+                    timeRemaining--;
+                } else {
+                    // Rate lock expired
+                    const timerElements = document.querySelectorAll('[data-bind="ratelock.timeRemaining"]');
+                    timerElements.forEach(el => {
+                        el.textContent = 'Expired';
+                        el.classList.add('text-destructive');
+                    });
+                }
+            }
+            
+            // Update countdown every second
+            setInterval(updateCountdown, 1000);
+
+            // Input validation and real-time calculation
+            const sendAmountInput = document.getElementById('send-amount');
+            const receiveAmountInput = document.getElementById('receive-amount');
+            
+            sendAmountInput.addEventListener('input', () => {
+                const sendAmount = parseFloat(sendAmountInput.value) || 0;
+                const fee = sendAmount * 0.005; // 0.5% fee
+                const receiveAmount = (sendAmount - fee) * currentRate;
+                
+                receiveAmountInput.value = receiveAmount > 0 ? receiveAmount.toFixed(2) : '';
+                
+                // Update fee display
+                const feeElements = document.querySelectorAll('[data-bind="fees.platform"]');
+                feeElements.forEach(el => {
+                    el.textContent = `${fee.toFixed(3)} USDT (0.5%)`;
+                });
+            });
+
+            // Initialize with default values
+            sendAmountInput.value = '100';
+            sendAmountInput.dispatchEvent(new Event('input'));
+        })();
+    </script>
+</body>
+</html>

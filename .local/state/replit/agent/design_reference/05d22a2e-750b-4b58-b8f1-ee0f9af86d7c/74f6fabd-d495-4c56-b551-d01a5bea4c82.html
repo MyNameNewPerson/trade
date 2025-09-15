@@ -1,0 +1,938 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoExchange - Безопасный обмен криптовалют</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                    chart: {
+                        "1": "var(--chart-1)",
+                        "2": "var(--chart-2)",
+                        "3": "var(--chart-3)",
+                        "4": "var(--chart-4)",
+                        "5": "var(--chart-5)",
+                    }
+                },
+                fontFamily: {
+                    sans: ["var(--font-sans)"],
+                    serif: ["var(--font-serif)"],
+                    mono: ["var(--font-mono)"],
+                }
+            },
+        }
+    };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(221.2 83.2% 53.3%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 84% 4.9%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(221.2 83.2% 53.3%);
+            --radius: 0.75rem;
+            --font-sans: "Inter", system-ui, sans-serif;
+            --font-serif: "Georgia", serif;
+            --font-mono: "Fira Code", monospace;
+            --chart-1: hsl(12 76% 61%);
+            --chart-2: hsl(173 58% 39%);
+            --chart-3: hsl(197 37% 24%);
+            --chart-4: hsl(43 74% 66%);
+            --chart-5: hsl(27 87% 67%);
+        }
+        
+        .dark {
+            --background: hsl(222.2 84% 4.9%);
+            --foreground: hsl(210 40% 98%);
+            --card: hsl(222.2 84% 4.9%);
+            --card-foreground: hsl(210 40% 98%);
+            --popover: hsl(222.2 84% 4.9%);
+            --popover-foreground: hsl(210 40% 98%);
+            --primary: hsl(217.2 91.2% 59.8%);
+            --primary-foreground: hsl(222.2 84% 4.9%);
+            --secondary: hsl(217.2 32.6% 17.5%);
+            --secondary-foreground: hsl(210 40% 98%);
+            --muted: hsl(217.2 32.6% 17.5%);
+            --muted-foreground: hsl(215 20.2% 65.1%);
+            --accent: hsl(217.2 32.6% 17.5%);
+            --accent-foreground: hsl(210 40% 98%);
+            --destructive: hsl(0 62.8% 30.6%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(217.2 32.6% 17.5%);
+            --input: hsl(217.2 32.6% 17.5%);
+            --ring: hsl(224.3 76.3% 94.1%);
+        }
+        
+        body {
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .dark .glass-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .floating-label {
+            position: relative;
+        }
+        
+        .floating-label input:focus + label,
+        .floating-label input:not(:placeholder-shown) + label {
+            transform: translateY(-1.5rem) scale(0.85);
+            color: rgb(var(--primary));
+        }
+        
+        .floating-label label {
+            position: absolute;
+            left: 0.75rem;
+            top: 0.75rem;
+            transition: all 0.2s ease-in-out;
+            pointer-events: none;
+            background: white;
+            padding: 0 0.25rem;
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .rate-update {
+            animation: highlightRate 0.5s ease-in-out;
+        }
+        
+        @keyframes highlightRate {
+            0% { background-color: rgba(34, 197, 94, 0.2); }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="relative z-50 bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-exchange-alt text-2xl text-white"></i>
+                        <span class="text-xl font-bold text-white">CryptoExchange</span>
+                    </div>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-white hover:text-blue-200 transition-colors">Обмен</a>
+                    <a href="#" class="text-white hover:text-blue-200 transition-colors">Курсы</a>
+                    <a href="#" class="text-white hover:text-blue-200 transition-colors">Отзывы</a>
+                    <a href="#" class="text-white hover:text-blue-200 transition-colors">FAQ</a>
+                    <a href="#" class="text-white hover:text-blue-200 transition-colors">Поддержка</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button id="themeToggle" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                        <i class="fas fa-moon text-white"></i>
+                    </button>
+                    <button id="langToggle" class="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white text-sm">
+                        RU
+                    </button>
+                    <button class="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
+                        Войти
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Exchange Widget -->
+    <main class="relative min-h-screen">
+        <!-- Background with overlay -->
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800"></div>
+        <!-- Decorative cryptocurrency trading background image -->
+        <div class="absolute inset-0 opacity-10" style="background-image: url('https://images.unsplash.com/photo-1621761191319-c6fb62004040?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080'); background-size: cover; background-position: center;"></div>
+        
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Left Column - Marketing Content -->
+                <div class="text-white space-y-8">
+                    <div class="space-y-4">
+                        <h1 class="text-4xl md:text-6xl font-bold leading-tight">
+                            Безопасный обмен
+                            <span class="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                                криптовалют
+                            </span>
+                        </h1>
+                        <p class="text-xl text-blue-100">
+                            Обменивайте криптовалюты на фиат и наоборот с лучшими курсами. 
+                            Без регистрации, быстро и безопасно.
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-shield-alt text-green-400 text-xl"></i>
+                                <div>
+                                    <div class="font-semibold">Безопасность</div>
+                                    <div class="text-sm text-blue-100">SSL + 2FA защита</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-clock text-yellow-400 text-xl"></i>
+                                <div>
+                                    <div class="font-semibold">Скорость</div>
+                                    <div class="text-sm text-blue-100">До 15 минут</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-percentage text-purple-400 text-xl"></i>
+                                <div>
+                                    <div class="font-semibold">Комиссия</div>
+                                    <div class="text-sm text-blue-100">От 0.5%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-6">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">500K+</div>
+                            <div class="text-sm text-blue-100">Обменов</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">50+</div>
+                            <div class="text-sm text-blue-100">Валют</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">24/7</div>
+                            <div class="text-sm text-blue-100">Поддержка</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column - Exchange Widget -->
+                <div class="glass-card rounded-xl p-6 md:p-8 max-w-md mx-auto w-full">
+                    <div class="space-y-6">
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold text-white mb-2">Обмен валют</h2>
+                            <div class="flex items-center justify-center space-x-2 text-sm text-blue-100">
+                                <span class="pulse-dot w-2 h-2 bg-green-400 rounded-full"></span>
+                                <span>Курсы обновляются в реальном времени</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Exchange Form -->
+                        <form class="space-y-6" id="exchangeForm">
+                            <!-- From Currency -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-white">Отдаете</label>
+                                <div class="relative">
+                                    <div class="flex space-x-2">
+                                        <div class="relative flex-1">
+                                            <input 
+                                                type="number" 
+                                                id="fromAmount" 
+                                                placeholder="0.00"
+                                                class="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+                                                data-mock="true"
+                                            >
+                                        </div>
+                                        <div class="relative">
+                                            <select class="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none pr-10" id="fromCurrency">
+                                                <option value="btc">BTC</option>
+                                                <option value="eth">ETH</option>
+                                                <option value="usdt-trc20" selected>USDT TRC20</option>
+                                                <option value="usdt-erc20">USDT ERC20</option>
+                                                <option value="usdc">USDC</option>
+                                                <option value="bnb">BNB</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 pointer-events-none"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-blue-100">
+                                    Мин: <span data-bind="limits.min">10</span> USDT • Макс: <span data-bind="limits.max">50,000</span> USDT
+                                </div>
+                            </div>
+                            
+                            <!-- Exchange Direction -->
+                            <div class="flex justify-center">
+                                <button type="button" id="swapCurrencies" class="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 transform hover:rotate-180">
+                                    <i class="fas fa-exchange-alt text-white"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- To Currency -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-white">Получаете</label>
+                                <div class="relative">
+                                    <div class="flex space-x-2">
+                                        <div class="relative flex-1">
+                                            <input 
+                                                type="text" 
+                                                id="toAmount" 
+                                                placeholder="0.00"
+                                                readonly
+                                                class="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/50 cursor-not-allowed"
+                                                data-bind="calculated.amount"
+                                                data-mock="true"
+                                            >
+                                        </div>
+                                        <div class="relative">
+                                            <select class="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none pr-10" id="toCurrency">
+                                                <option value="card-mdl" selected>Карта MDL</option>
+                                                <option value="card-usd">Карта USD</option>
+                                                <option value="card-eur">Карта EUR</option>
+                                                <option value="card-rub">Карта RUB</option>
+                                                <option value="btc">BTC</option>
+                                                <option value="eth">ETH</option>
+                                                <option value="usdt-trc20">USDT TRC20</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 pointer-events-none"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Exchange Rate Info -->
+                            <div class="bg-white/5 rounded-lg p-4 space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-blue-100">Курс обмена:</span>
+                                    <span class="text-sm font-medium text-white rate-update" id="exchangeRate" data-bind="rates.current">
+                                        1 USDT = 16.16 MDL
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-blue-100">Комиссия платформы:</span>
+                                    <span class="text-sm text-green-400" data-bind="fees.platform">0.5%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-blue-100">Сетевая комиссия:</span>
+                                    <span class="text-sm text-blue-100" data-bind="fees.network">2.5 USDT</span>
+                                </div>
+                                <hr class="border-white/20">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-white">К получению:</span>
+                                    <span class="text-sm font-bold text-green-400" data-bind="final.amount">158.12 MDL</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Exchange Type -->
+                            <div class="space-y-3">
+                                <label class="text-sm font-medium text-white">Тип курса</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="relative">
+                                        <input type="radio" name="rateType" value="float" class="sr-only" checked>
+                                        <div class="p-3 bg-white/10 border border-white/20 rounded-lg cursor-pointer hover:bg-white/20 transition-all text-center rate-type-option">
+                                            <div class="text-sm font-medium text-white">Float</div>
+                                            <div class="text-xs text-blue-100">~0.5% комиссия</div>
+                                        </div>
+                                    </label>
+                                    <label class="relative">
+                                        <input type="radio" name="rateType" value="fixed" class="sr-only">
+                                        <div class="p-3 bg-white/10 border border-white/20 rounded-lg cursor-pointer hover:bg-white/20 transition-all text-center rate-type-option">
+                                            <div class="text-sm font-medium text-white">Fixed</div>
+                                            <div class="text-xs text-blue-100">~1% комиссия</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Contact Information -->
+                            <div class="space-y-4">
+                                <div class="floating-label">
+                                    <input 
+                                        type="email" 
+                                        id="email" 
+                                        placeholder=" "
+                                        class="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-transparent focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+                                        data-mock="true"
+                                    >
+                                    <label for="email" class="text-white/70">Email (опционально)</label>
+                                </div>
+                                
+                                <div class="floating-label">
+                                    <input 
+                                        type="text" 
+                                        id="telegram" 
+                                        placeholder=" "
+                                        class="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-transparent focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+                                        data-mock="true"
+                                    >
+                                    <label for="telegram" class="text-white/70">Telegram (опционально)</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Agreement -->
+                            <label class="flex items-start space-x-3 cursor-pointer">
+                                <input type="checkbox" class="mt-1 h-4 w-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2" required>
+                                <span class="text-sm text-blue-100">
+                                    Я даю согласие на обработку моих персональных данных и принимаю условия 
+                                    <a href="#" class="text-blue-300 hover:text-blue-200 underline">Пользовательского соглашения</a> 
+                                    и <a href="#" class="text-blue-300 hover:text-blue-200 underline">AML-проверки</a>.
+                                </span>
+                            </label>
+                            
+                            <!-- Submit Button -->
+                            <button 
+                                type="submit" 
+                                class="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                                data-event="click:createExchange"
+                            >
+                                <i class="fas fa-exchange-alt mr-2"></i>
+                                Создать обмен
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Features Section -->
+    <section class="py-20 bg-white/10 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
+                    Почему выбирают нас?
+                </h2>
+                <p class="text-xl text-blue-100 max-w-2xl mx-auto">
+                    Более 500,000 успешных обменов и тысячи довольных клиентов по всему миру
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="glass-card rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-2xl text-blue-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Максимальная безопасность</h3>
+                    <p class="text-blue-100">SSL шифрование, холодные кошельки и многоуровневая защита</p>
+                </div>
+                
+                <div class="glass-card rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-bolt text-2xl text-green-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Мгновенные обмены</h3>
+                    <p class="text-blue-100">Автоматическая обработка и выплаты в течение 15 минут</p>
+                </div>
+                
+                <div class="glass-card rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-coins text-2xl text-purple-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Лучшие курсы</h3>
+                    <p class="text-blue-100">Конкурентные курсы обмена с минимальными комиссиями</p>
+                </div>
+                
+                <div class="glass-card rounded-xl p-6 text-center">
+                    <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-headset text-2xl text-yellow-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Поддержка 24/7</h3>
+                    <p class="text-blue-100">Круглосуточная техническая поддержка на русском языке</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Supported Currencies -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
+                    Поддерживаемые валюты
+                </h2>
+                <p class="text-xl text-blue-100">
+                    Обменивайте между 50+ криптовалютами и фиатными валютами
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <!-- Cryptocurrency icons would be fetched from real API -->
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-orange-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <i class="fab fa-bitcoin text-white"></i>
+                    </div>
+                    <div class="text-sm font-medium text-white">BTC</div>
+                    <div class="text-xs text-blue-100">Bitcoin</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <i class="fab fa-ethereum text-white"></i>
+                    </div>
+                    <div class="text-sm font-medium text-white">ETH</div>
+                    <div class="text-xs text-blue-100">Ethereum</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-green-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <span class="text-white text-xs font-bold">T</span>
+                    </div>
+                    <div class="text-sm font-medium text-white">USDT</div>
+                    <div class="text-xs text-blue-100">Tether</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-blue-600 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <span class="text-white text-xs font-bold">C</span>
+                    </div>
+                    <div class="text-sm font-medium text-white">USDC</div>
+                    <div class="text-xs text-blue-100">USD Coin</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-yellow-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <span class="text-white text-xs font-bold">B</span>
+                    </div>
+                    <div class="text-sm font-medium text-white">BNB</div>
+                    <div class="text-xs text-blue-100">Binance</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-purple-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <i class="fas fa-credit-card text-white text-xs"></i>
+                    </div>
+                    <div class="text-sm font-medium text-white">MDL</div>
+                    <div class="text-xs text-blue-100">Moldova</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-red-500 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <i class="fas fa-credit-card text-white text-xs"></i>
+                    </div>
+                    <div class="text-sm font-medium text-white">RUB</div>
+                    <div class="text-xs text-blue-100">Рубль</div>
+                </div>
+                
+                <div class="glass-card rounded-lg p-4 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div class="w-8 h-8 bg-gray-600 rounded-full mx-auto mb-2 flex items-center justify-center">
+                        <span class="text-white text-xs font-bold">+</span>
+                    </div>
+                    <div class="text-sm font-medium text-white">50+</div>
+                    <div class="text-xs text-blue-100">Еще валют</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Exchanges -->
+    <section class="py-20 bg-white/5 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
+                    Последние обмены
+                </h2>
+                <p class="text-xl text-blue-100">
+                    Посмотрите на активность других пользователей в реальном времени
+                </p>
+            </div>
+            
+            <div class="glass-card rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-blue-200 uppercase tracking-wider">Время</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-blue-200 uppercase tracking-wider">Отдает</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-blue-200 uppercase tracking-wider">Получает</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-blue-200 uppercase tracking-wider">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/10" data-mock="true">
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">2 мин назад</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">150 USDT</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">2,424 MDL</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
+                                        Завершен
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">5 мин назад</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">0.005 BTC</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">180 USDT</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs font-medium bg-yellow-500/20 text-yellow-400 rounded-full">
+                                        В обработке
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">8 мин назад</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">500 USDT</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">8,080 MDL</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
+                                        Завершен
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-black/20 backdrop-blur-md py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-exchange-alt text-xl text-white"></i>
+                        <span class="text-xl font-bold text-white">CryptoExchange</span>
+                    </div>
+                    <p class="text-blue-100">
+                        Безопасная платформа для обмена криптовалют с лучшими курсами и минимальными комиссиями.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-white hover:text-blue-200">
+                            <i class="fab fa-telegram text-xl"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-blue-200">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-blue-200">
+                            <i class="fab fa-discord text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-4">Обмен</h3>
+                    <ul class="space-y-2 text-blue-100">
+                        <li><a href="#" class="hover:text-white transition-colors">Bitcoin</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Ethereum</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">USDT</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Карты</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-4">Поддержка</h3>
+                    <ul class="space-y-2 text-blue-100">
+                        <li><a href="#" class="hover:text-white transition-colors">FAQ</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Отзывы</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Контакты</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">API</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-4">Правовая информация</h3>
+                    <ul class="space-y-2 text-blue-100">
+                        <li><a href="#" class="hover:text-white transition-colors">Пользовательское соглашение</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Политика конфиденциальности</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">AML политика</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">KYC процедуры</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="border-white/20 my-8">
+            
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <p class="text-blue-100 text-sm">
+                    © 2024 CryptoExchange. Все права защищены.
+                </p>
+                <div class="flex items-center space-x-4 text-sm text-blue-100">
+                    <span>Лицензия: № FIU123456</span>
+                    <span>•</span>
+                    <span>SSL Защищено</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Live Chat Widget -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button class="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center justify-center">
+            <i class="fas fa-comments text-white text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Order Status Modal (Hidden by default) -->
+    <div id="orderStatusModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+            <div class="glass-card rounded-xl p-6 max-w-md w-full">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-white">Статус заказа</h3>
+                    <button class="text-white/60 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Order Progress -->
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">Заказ создан</div>
+                                <div class="text-blue-100 text-sm">ID: #EX123456789</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-clock text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">Ожидание депозита</div>
+                                <div class="text-blue-100 text-sm">TTL: 08:45</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-hourglass text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-white/60 font-medium">Подтверждение</div>
+                                <div class="text-blue-100/60 text-sm">0/3 confirmations</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Deposit Address -->
+                    <div class="bg-white/5 rounded-lg p-4">
+                        <div class="text-sm font-medium text-white mb-2">Адрес для депозита:</div>
+                        <div class="flex items-center space-x-2">
+                            <input 
+                                type="text" 
+                                value="TQn9Y2khEsLMWD..." 
+                                readonly 
+                                class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                data-mock="true"
+                            >
+                            <button class="px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded text-white text-sm">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Theme toggle functionality
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+            let isDark = false;
+            
+            themeToggle.addEventListener('click', function() {
+                isDark = !isDark;
+                if (isDark) {
+                    body.classList.add('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun text-white"></i>';
+                } else {
+                    body.classList.remove('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-moon text-white"></i>';
+                }
+            });
+            
+            // Language toggle
+            const langToggle = document.getElementById('langToggle');
+            let currentLang = 'RU';
+            
+            langToggle.addEventListener('click', function() {
+                currentLang = currentLang === 'RU' ? 'EN' : 'RU';
+                langToggle.textContent = currentLang;
+                // TODO: Implement language switching functionality
+            });
+            
+            // Exchange rate simulation
+            const rates = {
+                'usdt-trc20': { 'card-mdl': 16.16, 'card-usd': 1.00, 'btc': 0.000028 },
+                'btc': { 'usdt-trc20': 35000, 'card-usd': 35000 },
+                'eth': { 'usdt-trc20': 2200, 'card-usd': 2200 }
+            };
+            
+            function updateExchangeRate() {
+                const fromCurrency = document.getElementById('fromCurrency').value;
+                const toCurrency = document.getElementById('toCurrency').value;
+                const rateElement = document.getElementById('exchangeRate');
+                
+                if (rates[fromCurrency] && rates[fromCurrency][toCurrency]) {
+                    const rate = rates[fromCurrency][toCurrency];
+                    const variance = (Math.random() - 0.5) * 0.02; // ±1% variance
+                    const newRate = rate * (1 + variance);
+                    rateElement.textContent = `1 ${fromCurrency.toUpperCase()} = ${newRate.toFixed(6)} ${toCurrency.toUpperCase()}`;
+                    rateElement.classList.add('rate-update');
+                    setTimeout(() => rateElement.classList.remove('rate-update'), 500);
+                }
+            }
+            
+            // Update rates every 5 seconds
+            setInterval(updateExchangeRate, 5000);
+            
+            // Currency swap functionality
+            document.getElementById('swapCurrencies').addEventListener('click', function() {
+                const fromSelect = document.getElementById('fromCurrency');
+                const toSelect = document.getElementById('toCurrency');
+                const fromAmount = document.getElementById('fromAmount');
+                const toAmount = document.getElementById('toAmount');
+                
+                // Swap currency selections
+                const tempValue = fromSelect.value;
+                fromSelect.value = toSelect.value;
+                toSelect.value = tempValue;
+                
+                // Swap amounts
+                const tempAmount = fromAmount.value;
+                fromAmount.value = toAmount.value;
+                toAmount.value = tempAmount;
+                
+                updateExchangeRate();
+                calculateExchange();
+            });
+            
+            // Exchange calculation
+            function calculateExchange() {
+                const fromAmount = parseFloat(document.getElementById('fromAmount').value) || 0;
+                const fromCurrency = document.getElementById('fromCurrency').value;
+                const toCurrency = document.getElementById('toCurrency').value;
+                const toAmountElement = document.getElementById('toAmount');
+                
+                if (rates[fromCurrency] && rates[fromCurrency][toCurrency] && fromAmount > 0) {
+                    const rate = rates[fromCurrency][toCurrency];
+                    const calculated = fromAmount * rate * 0.995; // 0.5% fee
+                    toAmountElement.value = calculated.toFixed(6);
+                } else {
+                    toAmountElement.value = '';
+                }
+            }
+            
+            // Real-time calculation
+            document.getElementById('fromAmount').addEventListener('input', calculateExchange);
+            document.getElementById('fromCurrency').addEventListener('change', function() {
+                updateExchangeRate();
+                calculateExchange();
+            });
+            document.getElementById('toCurrency').addEventListener('change', function() {
+                updateExchangeRate();
+                calculateExchange();
+            });
+            
+            // Rate type selection
+            document.querySelectorAll('input[name="rateType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.querySelectorAll('.rate-type-option').forEach(option => {
+                        option.classList.remove('bg-blue-500/30', 'border-blue-400');
+                        option.classList.add('bg-white/10', 'border-white/20');
+                    });
+                    
+                    const selectedOption = this.parentElement.querySelector('.rate-type-option');
+                    selectedOption.classList.remove('bg-white/10', 'border-white/20');
+                    selectedOption.classList.add('bg-blue-500/30', 'border-blue-400');
+                });
+            });
+            
+            // Form submission
+            document.getElementById('exchangeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // TODO: Implement actual form submission logic
+                alert('Заказ создан! ID: #EX' + Math.random().toString(36).substr(2, 9).toUpperCase());
+                
+                // Show order status modal (simulation)
+                setTimeout(() => {
+                    document.getElementById('orderStatusModal').classList.remove('hidden');
+                }, 1000);
+            });
+            
+            // Initialize
+            updateExchangeRate();
+            
+            // Set default rate type selection
+            document.querySelector('input[name="rateType"][value="float"]').checked = true;
+            document.querySelector('input[name="rateType"][value="float"]').dispatchEvent(new Event('change'));
+        })();
+    </script>
+</body>
+</html>

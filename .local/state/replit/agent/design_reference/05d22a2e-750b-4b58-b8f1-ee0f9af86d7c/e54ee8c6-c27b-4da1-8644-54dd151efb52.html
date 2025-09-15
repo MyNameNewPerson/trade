@@ -1,0 +1,656 @@
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoExchange - Безопасный обмен криптовалют</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                }
+            }
+        }
+    };
+    </script>
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(221.2 83.2% 53.3%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 47.4% 11.2%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 47.4% 11.2%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(221.2 83.2% 53.3%);
+            --radius: 12px;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, hsl(221.2 83.2% 53.3%) 0%, hsl(262.1 83.3% 57.8%) 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .crypto-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+        
+        .exchange-arrow {
+            transition: transform 0.2s ease;
+        }
+        
+        .exchange-arrow:hover {
+            transform: rotate(180deg);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="min-h-full bg-background font-[Inter] antialiased">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-card border-b border-border sticky top-0 z-50 backdrop-blur-sm bg-card/95">
+        <div class="container mx-auto px-4 py-4">
+            <nav class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-exchange-alt text-primary-foreground text-sm"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-foreground">CryptoExchange</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">Обменник</a>
+                    <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">О нас</a>
+                    <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">Поддержка</a>
+                    <button class="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                        Войти
+                    </button>
+                </div>
+                <button class="md:hidden text-foreground">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: Hero Section -->
+    <!-- Modern financial technology background with digital elements -->
+    <section class="relative py-20 gradient-bg overflow-hidden">
+        <div class="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]"></div>
+        <div class="container mx-auto px-4 relative z-10">
+            <div class="text-center text-white mb-12">
+                <h2 class="text-4xl md:text-6xl font-bold mb-6">
+                    Безопасный обмен<br>
+                    <span class="bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                        криптовалют
+                    </span>
+                </h2>
+                <p class="text-xl text-blue-100 max-w-2xl mx-auto">
+                    Мгновенный обмен между криптовалютами и банковскими картами с лучшими курсами и полной безопасностью
+                </p>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Hero Section -->
+
+    <!-- @COMPONENT: Exchange Widget -->
+    <section class="relative -mt-10 pb-20">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="glass-card rounded-2xl shadow-2xl p-8">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Exchange Form -->
+                        <div class="space-y-6">
+                            <h3 class="text-2xl font-bold text-foreground mb-6">Обмен валюты</h3>
+                            
+                            <!-- From Currency -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-muted-foreground">Отдаете</label>
+                                <div class="relative">
+                                    <div class="flex items-center space-x-3 p-4 border border-border rounded-lg bg-background cursor-pointer hover:border-primary transition-colors" data-dropdown="from-currency">
+                                        <!-- Tether USDT icon representation -->
+                                        <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-xs font-bold">₮</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="font-medium text-foreground">Tether TRC20</div>
+                                            <div class="text-sm text-muted-foreground">USDT</div>
+                                        </div>
+                                        <i class="fas fa-chevron-down text-muted-foreground"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative">
+                                    <input 
+                                        type="number" 
+                                        placeholder="Введите сумму" 
+                                        class="w-full p-4 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        data-bind="fromAmount"
+                                        value="100"
+                                    />
+                                    <div class="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                                        USDT
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Exchange Direction Button -->
+                            <div class="flex justify-center">
+                                <button class="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center exchange-arrow hover:bg-primary/90 transition-all">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                            </div>
+
+                            <!-- To Currency -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-muted-foreground">Получаете</label>
+                                <div class="relative">
+                                    <div class="flex items-center space-x-3 p-4 border border-border rounded-lg bg-background cursor-pointer hover:border-primary transition-colors" data-dropdown="to-currency">
+                                        <!-- Moldovan Leu card icon representation -->
+                                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-credit-card text-white text-xs"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="font-medium text-foreground">Карта Visa/MasterCard</div>
+                                            <div class="text-sm text-muted-foreground">MDL</div>
+                                        </div>
+                                        <i class="fas fa-chevron-down text-muted-foreground"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative">
+                                    <input 
+                                        type="number" 
+                                        placeholder="Получите" 
+                                        class="w-full p-4 border border-border rounded-lg bg-secondary text-foreground placeholder-muted-foreground outline-none"
+                                        data-bind="toAmount"
+                                        value="1616.00"
+                                        readonly
+                                    />
+                                    <div class="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                                        MDL
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Exchange Type Toggle -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-muted-foreground">Тип курса</label>
+                                <div class="flex bg-secondary rounded-lg p-1">
+                                    <button class="flex-1 py-2 px-4 bg-primary text-primary-foreground rounded-md font-medium transition-colors">
+                                        Fixed
+                                    </button>
+                                    <button class="flex-1 py-2 px-4 text-muted-foreground hover:text-foreground transition-colors">
+                                        Float
+                                    </button>
+                                </div>
+                                <p class="text-xs text-muted-foreground">
+                                    Fixed: курс заблокирован на 10 минут, комиссия 1%
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Exchange Info -->
+                        <div class="space-y-6">
+                            <div class="bg-secondary/50 rounded-lg p-6 space-y-4">
+                                <h4 class="font-semibold text-foreground">Детали обмена</h4>
+                                
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-muted-foreground">Курс:</span>
+                                        <span class="font-medium text-foreground">1 USDT = 16.16 MDL</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-muted-foreground">Комиссия платформы:</span>
+                                        <span class="font-medium text-foreground">1.0%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-muted-foreground">Network fee:</span>
+                                        <span class="font-medium text-foreground">~1 USDT</span>
+                                    </div>
+                                    <hr class="border-border">
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-foreground">Итого получите:</span>
+                                        <span class="text-green-600">1599.84 MDL</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-2 text-xs text-muted-foreground">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Курс заблокирован на 09:47</span>
+                                </div>
+                            </div>
+
+                            <!-- Limits and Processing Info -->
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                                <h5 class="font-medium text-blue-900">Условия обработки</h5>
+                                <ul class="text-sm text-blue-800 space-y-1">
+                                    <li>• Минимум: 10 USDT</li>
+                                    <li>• Максимум: 50,000 USDT</li>
+                                    <li>• Время обработки: до 90 минут</li>
+                                    <li>• AML-проверка обязательна</li>
+                                </ul>
+                            </div>
+
+                            <!-- Security Features -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center space-y-2">
+                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto">
+                                        <i class="fas fa-shield-alt text-green-600"></i>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">Защищенные транзакции</p>
+                                </div>
+                                <div class="text-center space-y-2">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto">
+                                        <i class="fas fa-lock text-blue-600"></i>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">SSL шифрование</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card and Personal Details Form -->
+                    <div class="mt-8 pt-8 border-t border-border">
+                        <h4 class="text-lg font-semibold text-foreground mb-6">Платежные данные</h4>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <!-- Card Details -->
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">Номер карты *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="1234 5678 9012 3456" 
+                                        class="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        data-implementation="Card number validation with Luhn algorithm"
+                                    />
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">Название банка *</label>
+                                    <select class="w-full p-3 border border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                                        <option>Выберите банк</option>
+                                        <option>Moldova Agroindbank</option>
+                                        <option>Mobiasbanca</option>
+                                        <option>Victoriabank</option>
+                                        <option>Energbank</option>
+                                        <option>Другой банк</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">ФИО владельца карты *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Иванов Иван Иванович" 
+                                        class="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <!-- Personal Data -->
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">Email *</label>
+                                    <input 
+                                        type="email" 
+                                        placeholder="your@email.com" 
+                                        class="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">Telegram (опционально)</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="@username" 
+                                        class="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-muted-foreground">Подтверждение личности</label>
+                                    <div class="p-3 border-2 border-dashed border-border rounded-lg text-center cursor-pointer hover:border-primary transition-colors">
+                                        <i class="fas fa-upload text-muted-foreground mb-2"></i>
+                                        <p class="text-sm text-muted-foreground">Загрузите документ (для сумм >$1000)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms and Submit -->
+                    <div class="mt-8 pt-6 border-t border-border space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <input type="checkbox" id="terms" class="mt-1 text-primary focus:ring-primary border-border rounded">
+                            <label for="terms" class="text-sm text-muted-foreground">
+                                Я даю согласие на обработку моих персональных данных и принимаю условия 
+                                <a href="#" class="text-primary hover:underline">Пользовательского соглашения</a> 
+                                и <a href="#" class="text-primary hover:underline">AML-проверки</a>.
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="remember" class="text-primary focus:ring-primary border-border rounded">
+                            <label for="remember" class="text-sm text-muted-foreground">
+                                Не запоминать введенные данные
+                            </label>
+                        </div>
+                        
+                        <button class="w-full bg-primary text-primary-foreground py-4 rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" data-event="click:createExchange">
+                            Создать заявку на обмен
+                        </button>
+                        
+                        <p class="text-xs text-center text-muted-foreground">
+                            Создавая заявку, вы соглашаетесь с нашими условиями обслуживания
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Exchange Widget -->
+
+    <!-- @COMPONENT: Features Section -->
+    <section class="py-20 bg-secondary/30">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h3 class="text-3xl font-bold text-foreground mb-4">Почему выбирают нас</h3>
+                <p class="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    Мы предоставляем надежный и безопасный сервис обмена с лучшими условиями на рынке
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center space-y-4">
+                    <!-- Modern cryptocurrency trading interface -->
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
+                        <i class="fas fa-bolt text-white text-2xl"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold text-foreground">Мгновенные операции</h4>
+                    <p class="text-muted-foreground">
+                        Автоматическая обработка большинства заявок в течение нескольких минут
+                    </p>
+                </div>
+                
+                <div class="text-center space-y-4">
+                    <!-- Secure banking and finance concept -->
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto">
+                        <i class="fas fa-shield-alt text-white text-2xl"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold text-foreground">Максимальная безопасность</h4>
+                    <p class="text-muted-foreground">
+                        Многоуровневая защита, AML-проверки и соответствие международным стандартам
+                    </p>
+                </div>
+                
+                <div class="text-center space-y-4">
+                    <!-- Digital payment cards and technology -->
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto">
+                        <i class="fas fa-percent text-white text-2xl"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold text-foreground">Лучшие курсы</h4>
+                    <p class="text-muted-foreground">
+                        Конкурентные курсы обмена и минимальные комиссии для всех операций
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: Features Section -->
+
+    <!-- @COMPONENT: Order Status Modal -->
+    <!-- @STATE: isModalOpen:boolean = false -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden" id="orderStatusModal">
+        <div class="bg-card rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-foreground mb-2">Заявка создана!</h3>
+                <p class="text-muted-foreground">Номер заявки: <span class="font-mono text-foreground">#EX-2024-001234</span></p>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="bg-secondary/50 rounded-lg p-4">
+                    <h4 class="font-semibold text-foreground mb-3">Детали заявки</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Отправляете:</span>
+                            <span class="font-medium text-foreground">100 USDT (TRC20)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Получаете:</span>
+                            <span class="font-medium text-foreground">1599.84 MDL</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Статус:</span>
+                            <span class="text-orange-600 font-medium">Ожидание депозита</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h5 class="font-medium text-blue-900 mb-2">Адрес для отправки</h5>
+                    <div class="font-mono text-sm bg-white p-3 rounded border break-all text-blue-800">
+                        TQn9Y2khEsLMWD7g8t8gk6B3FjCvS7NUMP
+                    </div>
+                    <button class="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1">
+                        <i class="fas fa-copy"></i>
+                        <span>Скопировать адрес</span>
+                    </button>
+                </div>
+                
+                <div class="text-center space-y-3">
+                    <p class="text-sm text-muted-foreground">
+                        Отправьте точную сумму на указанный адрес. После подтверждения в сети средства будут переведены на вашу карту.
+                    </p>
+                    <button class="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                        Отследить статус
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: Order Status Modal -->
+
+    <!-- @COMPONENT: Footer -->
+    <footer class="bg-card border-t border-border py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exchange-alt text-primary-foreground text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold text-foreground">CryptoExchange</span>
+                    </div>
+                    <p class="text-muted-foreground text-sm">
+                        Надежный и безопасный обмен криптовалют с поддержкой банковских карт.
+                    </p>
+                </div>
+                
+                <div class="space-y-4">
+                    <h5 class="font-semibold text-foreground">Сервисы</h5>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Обмен криптовалют</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Вывод на карту</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">API интеграция</a></li>
+                    </ul>
+                </div>
+                
+                <div class="space-y-4">
+                    <h5 class="font-semibold text-foreground">Информация</h5>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">О компании</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Условия использования</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Политика AML</a></li>
+                    </ul>
+                </div>
+                
+                <div class="space-y-4">
+                    <h5 class="font-semibold text-foreground">Поддержка</h5>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Центр помощи</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Telegram: @support</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Email: help@cryptoexchange.com</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <p class="text-sm text-muted-foreground">
+                    © 2024 CryptoExchange. Все права защищены.
+                </p>
+                <div class="flex items-center space-x-6">
+                    <span class="text-sm text-muted-foreground">Мы принимаем:</span>
+                    <div class="flex space-x-2">
+                        <i class="fab fa-bitcoin text-orange-500 text-lg"></i>
+                        <i class="fab fa-ethereum text-blue-500 text-lg"></i>
+                        <i class="fas fa-credit-card text-blue-600 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- @END_COMPONENT: Footer -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        (function() {
+            // Exchange rate calculation simulation
+            function updateExchangeRate() {
+                const fromAmount = document.querySelector('[data-bind="fromAmount"]');
+                const toAmount = document.querySelector('[data-bind="toAmount"]');
+                
+                if (fromAmount && toAmount) {
+                    const rate = 16.16; // Mock rate
+                    const fee = 0.01; // 1% platform fee
+                    const networkFee = 1; // Network fee in USDT
+                    
+                    fromAmount.addEventListener('input', function() {
+                        const amount = parseFloat(this.value) || 0;
+                        const finalAmount = (amount - networkFee) * rate * (1 - fee);
+                        toAmount.value = finalAmount > 0 ? finalAmount.toFixed(2) : '0.00';
+                    });
+                }
+            }
+            
+            // Form validation
+            function setupFormValidation() {
+                const createButton = document.querySelector('[data-event="click:createExchange"]');
+                if (createButton) {
+                    createButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        
+                        // Mock form validation
+                        const requiredFields = document.querySelectorAll('input[required], input[type="email"]');
+                        let isValid = true;
+                        
+                        requiredFields.forEach(field => {
+                            if (!field.value.trim()) {
+                                field.classList.add('border-destructive');
+                                isValid = false;
+                            } else {
+                                field.classList.remove('border-destructive');
+                            }
+                        });
+                        
+                        if (isValid) {
+                            showOrderModal();
+                        }
+                    });
+                }
+            }
+            
+            // Show order status modal
+            function showOrderModal() {
+                const modal = document.getElementById('orderStatusModal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                    
+                    // Close modal on backdrop click
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            closeOrderModal();
+                        }
+                    });
+                }
+            }
+            
+            function closeOrderModal() {
+                const modal = document.getElementById('orderStatusModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            }
+            
+            // Initialize all functionality
+            document.addEventListener('DOMContentLoaded', function() {
+                updateExchangeRate();
+                setupFormValidation();
+            });
+        })();
+    </script>
+</body>
+</html>

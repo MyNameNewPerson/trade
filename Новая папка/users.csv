@@ -1,0 +1,4 @@
+"id","email","first_name","last_name","profile_image_url","role","is_active","created_at","updated_at","password"
+"43051749","belqka444@gmail.com","Сергей","qwf",,"admin","true","""2025-09-14T15:25:33.298Z""","""2025-09-15T06:46:07.412Z""","$2b$12$jcf3hCoWKMEz.r4.LhlBsOEvL0d7CIhGRr9n7VzHcLV89wN4.4HR2"
+"6738ea84-1299-4124-9612-61904ef4e530","belqka333@gmail.com","jin30",,,"user","true","""2025-09-15T05:28:31.205Z""","""2025-09-15T05:32:26.260Z""","$2b$12$2swEaexo3Wnb2Ddbc04d2O2KqwjQIeN0k66lQqfM7tskT3tXT7Z8q"
+"admin-1","admin@cryptoflow.com","Admin","User",,"admin","true","""2025-09-14T14:59:36.765Z""","""2025-09-14T14:59:36.765Z""",
