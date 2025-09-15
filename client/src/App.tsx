@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "./lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/protected-route";
 import ExchangeOnly from "@/pages/exchange-only"; // Main exchange page - clean widget only
 
 // Lazy load non-critical pages for better performance
@@ -38,7 +39,7 @@ function LoadingFallback() {
 }
 
 function Router() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -63,15 +64,21 @@ function Router() {
         <Route path="/activate" component={ActivatePage} />
         
         {/* User dashboard - only for authenticated users */}
-        {isAuthenticated && (
-          <Route path="/dashboard" component={UserDashboard} />
-        )}
+        <Route path="/dashboard">
+          <ProtectedRoute requiredRole="user">
+            <UserDashboard />
+          </ProtectedRoute>
+        </Route>
         
-        {/* Admin pages */}
+        {/* Admin login page - accessible by everyone */}
         <Route path="/admin/login" component={AdminLoginPage} />
-        {isAuthenticated && (
-          <Route path="/admin" component={AdminPanelPage} />
-        )}
+        
+        {/* Admin panel - only for admin users */}
+        <Route path="/admin">
+          <ProtectedRoute requiredRole="admin">
+            <AdminPanelPage />
+          </ProtectedRoute>
+        </Route>
         
         <Route component={NotFound} />
       </Switch>

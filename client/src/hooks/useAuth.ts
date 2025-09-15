@@ -39,10 +39,39 @@ export function useAuth() {
     networkMode: "online",
   });
 
+  // Role checking utility functions
+  const hasRole = (requiredRole: 'admin' | 'user'): boolean => {
+    if (!user || !user.role) return false;
+    
+    // Admin users have access to both admin and user roles
+    if (user.role === 'admin') return true;
+    
+    // User role only has access to user-level content
+    return user.role === requiredRole;
+  };
+
+  const isAdmin = (): boolean => {
+    return user?.role === 'admin';
+  };
+
+  const isUser = (): boolean => {
+    return user?.role === 'user';
+  };
+
+  const canAccess = (requiredRole?: 'admin' | 'user'): boolean => {
+    if (!requiredRole) return !!user; // Any authenticated user
+    return hasRole(requiredRole);
+  };
+
   return {
     user: user || null,
     isLoading,
     isAuthenticated: !!user,
-    error
+    error,
+    // Role checking functions
+    hasRole,
+    isAdmin,
+    isUser,
+    canAccess
   };
 }

@@ -14,7 +14,7 @@ import { User, LogIn, Settings, LogOut, Menu, X } from "lucide-react";
 
 export function Header() {
   const { t } = useTranslation();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -150,7 +150,7 @@ export function Header() {
                         </Button>
                       </Link>
                       
-                      {user.role === 'admin' && (
+                      {isAdmin() && (
                         <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>
                           <Button variant="ghost" size="lg" className="w-full justify-start text-base">
                             <Settings className="mr-3 h-5 w-5" />
@@ -251,7 +251,7 @@ export function Header() {
                       <span>Dashboard</span>
                     </DropdownMenuItem>
                   </Link>
-                  {user.role === 'admin' && (
+                  {isAdmin() && (
                     <Link href="/admin">
                       <DropdownMenuItem data-testid="link-admin">
                         <Settings className="mr-2 h-4 w-4" />
