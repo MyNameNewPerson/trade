@@ -1,6 +1,7 @@
 import { Router, type Response, type RequestHandler } from 'express';
 import { type AuthRequest, authenticateToken, requireAdmin } from '../middleware/auth';
 import { logAdminAction, executeAdminLog, updateAdminLogTargetId, AdminActions, AdminTargets } from '../middleware/admin-logger';
+import { requireAdminPassword, requireSecureSession } from '../middleware/secure-admin';
 import { 
   updateWalletSchema, 
   updateSettingSchema, 
@@ -12,6 +13,7 @@ import {
 } from '@shared/schema';
 import { storage } from '../storage';
 import { currencyConverter } from '../services/currency-converter';
+import { encryptionService } from '../services/encryption';
 import { z } from 'zod';
 
 const adminRouter = Router();
@@ -122,7 +124,7 @@ adminRouter.get('/dashboard-stats',
 
     // Convert all currency amounts to USD for proper distribution calculation
     const currencyUSDValues = new Map();
-    for (const [currency, amount] of currencyMap.entries()) {
+    for (const [currency, amount] of Array.from(currencyMap.entries())) {
       const usdValue = await currencyConverter.convertToUSD(amount, currency);
       currencyUSDValues.set(currency, usdValue);
     }
@@ -317,16 +319,24 @@ adminRouter.delete('/users/:id',
 );
 
 // =====================
-// TELEGRAM MANAGEMENT
+// TELEGRAM MANAGEMENT - SECURE
 // =====================
 
-// Get telegram configs
+// Get telegram configs (показываем только базовую информацию без токенов)
 adminRouter.get('/telegram-configs',
   logAdminAction('list_telegram_configs', AdminTargets.TELEGRAM, 'Admin viewed telegram configs'),
   (async (req: AuthRequest, res: Response) => {
   try {
     const configs = await storage.getTelegramConfigs();
-    res.json(configs);
+    
+    // Скрываем чувствительные данные
+    const safeConfigs = configs.map(config => ({
+      ...config,
+      botToken: '••••••••' + (config.botToken ? config.botToken.slice(-4) : ''),
+      signingSecret: config.signingSecret ? '••••••••••••••••' : ''
+    }));
+    
+    res.json(safeConfigs);
   } catch (error) {
     console.error('Get telegram configs error:', error);
     res.status(500).json({
@@ -336,17 +346,209 @@ adminRouter.get('/telegram-configs',
   }
 }) as RequestHandler);
 
-// Create telegram config
+// Создать защищенную сессию для работы с токенами
+adminRouter.post('/telegram/secure-auth',
+  requireAdminPassword('telegram_manage') as any,
+  logAdminAction('telegram_secure_auth', AdminTargets.TELEGRAM, 'Admin created secure session for Telegram access'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const sessionId = res.locals.secureSessionId;
+      
+      res.json({
+        success: true,
+        secureSessionId: sessionId,
+        expiresIn: 15 * 60, // 15 минут в секундах
+        message: 'Secure session created for Telegram management'
+      });
+    } catch (error) {
+      console.error('Create secure session error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create secure session',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Получить расшифрованный токен (ОЧЕНЬ ЗАЩИЩЕННАЯ ОПЕРАЦИЯ)
+adminRouter.post('/telegram/reveal-token',
+  requireSecureSession('telegram_manage') as any,
+  logAdminAction('reveal_telegram_token', AdminTargets.TELEGRAM, 'Admin revealed telegram token'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const { configId } = req.body;
+      
+      if (!configId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Configuration ID is required',
+        });
+      }
+
+      const config = await storage.getTelegramConfig(configId);
+      if (!config) {
+        return res.status(404).json({
+          success: false,
+          error: 'Telegram configuration not found',
+        });
+      }
+
+      // Расшифровываем токен только для показа (не сохраняем нигде)
+      const decryptedToken = encryptionService.decrypt(config.botToken);
+      const decryptedSecret = encryptionService.decrypt(config.signingSecret);
+
+      // Логируем критическое действие
+      updateAdminLogTargetId(req, configId);
+
+      res.json({
+        success: true,
+        botToken: decryptedToken,
+        signingSecret: decryptedSecret,
+        configName: config.name,
+        // Данные автоматически удалятся через 30 секунд на клиенте
+        autoDestroy: true
+      });
+
+    } catch (error) {
+      console.error('Reveal token error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to reveal token',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Тест соединения с Telegram (безопасный)
+adminRouter.post('/telegram/test-connection',
+  requireSecureSession('telegram_manage') as any,
+  logAdminAction('test_telegram_connection', AdminTargets.TELEGRAM, 'Admin tested telegram connection'),
+  (async (req: AuthRequest, res: Response) => {
+    try {
+      const { configId } = req.body;
+      
+      if (!configId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Configuration ID is required',
+        });
+      }
+
+      const config = await storage.getTelegramConfig(configId);
+      if (!config) {
+        return res.status(404).json({
+          success: false,
+          error: 'Telegram configuration not found',
+        });
+      }
+
+      // Расшифровываем токен для тестирования
+      const decryptedToken = encryptionService.decrypt(config.botToken);
+
+      // Тестируем подключение к Telegram API
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${decryptedToken}/getMe`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10 секунд timeout
+        });
+
+        if (!response.ok) {
+          throw new Error(`Telegram API error: ${response.status}`);
+        }
+
+        const botInfo = await response.json();
+        
+        if (botInfo.ok) {
+          // Обновляем статус тестирования в базе
+          await storage.updateTelegramTestStatus(configId, 'success');
+          
+          updateAdminLogTargetId(req, configId);
+          
+          res.json({
+            success: true,
+            botInfo: botInfo.result,
+            message: 'Connection successful'
+          });
+        } else {
+          throw new Error(botInfo.description || 'Unknown Telegram API error');
+        }
+
+      } catch (apiError: any) {
+        // Сохраняем ошибку в базе
+        await storage.updateTelegramTestStatus(configId, 'failed', apiError.message);
+        
+        res.status(400).json({
+          success: false,
+          error: 'Telegram API connection failed',
+          details: apiError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('Test connection error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to test connection',
+      });
+    }
+  }) as RequestHandler
+);
+
+// Создать telegram конфигурацию (с шифрованием)
 adminRouter.post('/telegram-configs',
+  requireSecureSession('telegram_manage') as any,
   logAdminAction(AdminActions.CREATE_TELEGRAM_CONFIG, AdminTargets.TELEGRAM, 'Admin created telegram config'),
   (async (req: AuthRequest, res: Response) => {
     try {
       const validatedData = createTelegramConfigSchema.parse(req.body);
       
-      const newConfig = await storage.createTelegramConfig(validatedData, req.user!.id);
+      // Шифруем чувствительные данные перед сохранением
+      const encryptedData = {
+        ...validatedData,
+        botToken: encryptionService.encrypt(validatedData.botToken),
+        signingSecret: encryptionService.encrypt(validatedData.signingSecret)
+      };
+      
+      // Также проверим валидность токена перед сохранением
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${validatedData.botToken}/getMe`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (!response.ok) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid Telegram bot token - unable to connect to Telegram API',
+          });
+        }
+
+        const botInfo = await response.json();
+        if (!botInfo.ok) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid Telegram bot token - API returned error',
+          });
+        }
+
+      } catch (apiError) {
+        return res.status(400).json({
+          success: false,
+          error: 'Unable to validate Telegram bot token - API connection failed',
+        });
+      }
+      
+      const newConfig = await storage.createTelegramConfig(encryptedData, req.user!.id);
       updateAdminLogTargetId(req, newConfig.id);
       
-      res.status(201).json(newConfig);
+      // Возвращаем конфигурацию без чувствительных данных
+      const safeConfig = {
+        ...newConfig,
+        botToken: '••••••••' + (validatedData.botToken ? validatedData.botToken.slice(-4) : ''),
+        signingSecret: '••••••••••••••••'
+      };
+      
+      res.status(201).json(safeConfig);
     } catch (error) {
       console.error('Create telegram config error:', error);
       
@@ -366,14 +568,45 @@ adminRouter.post('/telegram-configs',
   }) as RequestHandler
 );
 
-// Update telegram config
+// Обновить telegram конфигурацию (с шифрованием)
 adminRouter.put('/telegram-configs/:id',
+  requireSecureSession('telegram_manage') as any,
   logAdminAction(AdminActions.UPDATE_TELEGRAM_CONFIG, AdminTargets.TELEGRAM, 'Admin updated telegram config'),
   (async (req: AuthRequest, res: Response) => {
     try {
       const validatedData = createTelegramConfigSchema.partial().parse(req.body);
       
-      const updatedConfig = await storage.updateTelegramConfig(req.params.id, validatedData);
+      // Шифруем новые чувствительные данные если они предоставлены
+      const updateData = { ...validatedData };
+      if (validatedData.botToken) {
+        // Валидируем новый токен если предоставлен
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${validatedData.botToken}/getMe`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(10000)
+          });
+
+          if (!response.ok || !(await response.json()).ok) {
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid Telegram bot token',
+            });
+          }
+        } catch (apiError) {
+          return res.status(400).json({
+            success: false,
+            error: 'Unable to validate Telegram bot token',
+          });
+        }
+        
+        updateData.botToken = encryptionService.encrypt(validatedData.botToken);
+      }
+      
+      if (validatedData.signingSecret) {
+        updateData.signingSecret = encryptionService.encrypt(validatedData.signingSecret);
+      }
+      
+      const updatedConfig = await storage.updateTelegramConfig(req.params.id, updateData);
       if (!updatedConfig) {
         return res.status(404).json({
           success: false,
@@ -381,7 +614,14 @@ adminRouter.put('/telegram-configs/:id',
         });
       }
 
-      res.json(updatedConfig);
+      // Возвращаем безопасную версию конфигурации
+      const safeConfig = {
+        ...updatedConfig,
+        botToken: '••••••••' + (updatedConfig.botToken ? updatedConfig.botToken.slice(-4) : ''),
+        signingSecret: updatedConfig.signingSecret ? '••••••••••••••••' : ''
+      };
+
+      res.json(safeConfig);
     } catch (error) {
       console.error('Update telegram config error:', error);
       

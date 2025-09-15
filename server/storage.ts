@@ -975,6 +975,58 @@ export class PostgreSQLStorage implements IStorage {
     if (cardNumber.length < 4) return cardNumber;
     return '**** **** **** ' + cardNumber.slice(-4);
   }
+
+  // Недостающие методы для Telegram
+  async updateTelegramTestStatus(configId: string, status: 'success' | 'failed' | 'pending', error?: string): Promise<void> {
+    await db.update(telegramConfigs)
+      .set({
+        lastTestAt: new Date(),
+        lastTestStatus: status,
+        lastTestError: error || null
+      })
+      .where(eq(telegramConfigs.id, configId));
+  }
+
+  async revealTelegramToken(request: any, adminId: string): Promise<{ token: string; signingSecret: string; expiresIn: number }> {
+    // Эта функция будет реализована в роутах с дополнительной безопасностью
+    throw new Error('Use secure routes for token revealing');
+  }
+
+  async testTelegramConnection(request: any): Promise<{ success: boolean; botInfo?: any; error?: string }> {
+    // Эта функция будет реализована в роутах с дополнительной безопасностью
+    throw new Error('Use secure routes for connection testing');
+  }
+
+  async sendTelegramTest(configId: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    // Эта функция будет реализована в роутах
+    throw new Error('Use secure routes for sending test messages');
+  }
+
+  async getTelegramStatus(): Promise<{ configured: boolean; hasToken: boolean; hasChatId: boolean; hasSigningSecret: boolean; connectionTest?: any }> {
+    const configs = await this.getTelegramConfigs();
+    const activeConfig = configs.find(c => c.isActive);
+    
+    return {
+      configured: !!activeConfig,
+      hasToken: !!(activeConfig?.botToken),
+      hasChatId: !!(activeConfig?.chatConfigs && Array.isArray(activeConfig.chatConfigs) && (activeConfig.chatConfigs as any).length > 0),
+      hasSigningSecret: !!(activeConfig?.signingSecret),
+      connectionTest: activeConfig?.lastTestStatus ? {
+        success: activeConfig.lastTestStatus === 'success',
+        lastTest: activeConfig.lastTestAt
+      } : undefined
+    };
+  }
+
+  async getTelegramHistory(filters: any): Promise<{ history: TelegramHistory[]; total: number }> {
+    const history = await db.select().from(telegramHistory);
+    return { history, total: history.length };
+  }
+
+  async createTelegramHistory(history: InsertTelegramHistory): Promise<TelegramHistory> {
+    const [result] = await db.insert(telegramHistory).values(history).returning();
+    return result;
+  }
 }
 
 // Export the storage instance
