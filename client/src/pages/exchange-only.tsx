@@ -6,11 +6,22 @@ export default function ExchangeOnly() {
   const { t } = useTranslation();
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative">
+      {/* Falling Stars Background Effect */}
+      <div className="falling-stars-container">
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+        <div className="falling-star"></div>
+      </div>
+      
       <Header />
       
       {/* Simple, clean exchange page */}
-      <main className="min-h-[calc(100vh-4rem)]">
+      <main className="min-h-[calc(100vh-4rem)] relative z-10">
         <div className="container mx-auto px-4 py-8 sm:py-12">
           {/* Simple, minimal header */}
           <div className="text-center mb-8 sm:mb-12">

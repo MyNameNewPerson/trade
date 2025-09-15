@@ -13,6 +13,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import type { Order } from "@shared/schema";
 
+// Type guard for card details
+interface CardDetails {
+  number: string;
+  bankName: string;
+  holderName: string;
+}
+
+const isCardDetails = (obj: unknown): obj is CardDetails => {
+  return typeof obj === 'object' && obj !== null && 
+    'number' in obj && 'bankName' in obj && 'holderName' in obj;
+};
+
 const statusColors = {
   'awaiting_deposit': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   'confirmed': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -104,36 +116,39 @@ export default function OrderStatus() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Extract card details safely
+  const validCardDetails = order?.cardDetails && isCardDetails(order.cardDetails) ? order.cardDetails as CardDetails : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-6" data-testid="text-page-title">
+      <main className="container mx-auto px-4 py-6 sm:py-12 max-w-4xl">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6" data-testid="text-page-title">
             {t('orderTracking.title')}
           </h1>
-          <p className="text-muted-foreground text-lg" data-testid="text-page-subtitle">
+          <p className="text-muted-foreground text-base sm:text-lg" data-testid="text-page-subtitle">
             {t('orderTracking.subtitle')}
           </p>
         </div>
 
         {/* Order Lookup */}
-        <Card className="mb-8">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row gap-4">
+        <Card className="mb-6 sm:mb-8">
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Input
                 type="text"
                 placeholder={t('orderTracking.enterOrderId')}
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
-                className="flex-1"
+                className="flex-1 h-11 sm:h-10"
                 data-testid="input-order-id"
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
               <Button
                 onClick={handleSearch}
-                className="md:w-auto"
+                className="h-11 sm:h-10 sm:w-auto"
                 disabled={isLoading}
                 data-testid="button-track-order"
               >
@@ -183,46 +198,88 @@ export default function OrderStatus() {
               </div>
               
               {/* Progress Steps */}
-              <div className="flex items-center justify-between mb-8 overflow-x-auto">
-                {[
-                  { key: 'created', status: 'awaiting_deposit' },
-                  { key: 'awaitingPayment', status: 'confirmed' },
-                  { key: 'processing', status: 'processing' },
-                  { key: 'completed', status: 'completed' },
-                ].map((step, index) => {
-                  const stepStatus = getStepStatus(order.status, index);
-                  return (
-                    <div key={step.key} className="flex items-center min-w-0">
-                      <div className="flex items-center">
+              <div className="mb-8">
+                {/* Mobile: Vertical layout */}
+                <div className="block sm:hidden space-y-4">
+                  {[
+                    { key: 'created', status: 'awaiting_deposit' },
+                    { key: 'awaitingPayment', status: 'confirmed' },
+                    { key: 'processing', status: 'processing' },
+                    { key: 'completed', status: 'completed' },
+                  ].map((step, index) => {
+                    const stepStatus = getStepStatus(order.status, index);
+                    return (
+                      <div key={step.key} className="flex items-center">
                         <div 
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                             stepStatus === 'completed' ? 'bg-primary text-white' :
                             stepStatus === 'current' ? 'bg-primary text-white animate-pulse' :
                             'bg-muted text-muted-foreground'
                           }`}
-                          data-testid={`step-${index}`}
+                          data-testid={`step-mobile-${index}`}
                         >
                           {index + 1}
                         </div>
-                        <span className="ml-2 text-sm whitespace-nowrap">
-                          {t(`orderTracking.steps.${step.key}`)}
-                        </span>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium">
+                            {t(`orderTracking.steps.${step.key}`)}
+                          </div>
+                          <div className={`text-xs ${
+                            stepStatus === 'completed' ? 'text-green-600 dark:text-green-400' :
+                            stepStatus === 'current' ? 'text-primary' :
+                            'text-muted-foreground'
+                          }`}>
+                            {stepStatus === 'completed' ? '✓ Complete' :
+                             stepStatus === 'current' ? 'In Progress' : 'Pending'}
+                          </div>
+                        </div>
                       </div>
-                      {index < 3 && (
-                        <div className="flex-1 h-0.5 bg-border mx-4 min-w-8"></div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                {/* Desktop: Horizontal layout */}
+                <div className="hidden sm:flex items-center justify-between overflow-x-auto">
+                  {[
+                    { key: 'created', status: 'awaiting_deposit' },
+                    { key: 'awaitingPayment', status: 'confirmed' },
+                    { key: 'processing', status: 'processing' },
+                    { key: 'completed', status: 'completed' },
+                  ].map((step, index) => {
+                    const stepStatus = getStepStatus(order.status, index);
+                    return (
+                      <div key={step.key} className="flex items-center min-w-0">
+                        <div className="flex items-center">
+                          <div 
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                              stepStatus === 'completed' ? 'bg-primary text-white' :
+                              stepStatus === 'current' ? 'bg-primary text-white animate-pulse' :
+                              'bg-muted text-muted-foreground'
+                            }`}
+                            data-testid={`step-${index}`}
+                          >
+                            {index + 1}
+                          </div>
+                          <span className="ml-2 text-sm whitespace-nowrap">
+                            {t(`orderTracking.steps.${step.key}`)}
+                          </span>
+                        </div>
+                        {index < 3 && (
+                          <div className="flex-1 h-0.5 bg-border mx-4 min-w-8"></div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </CardHeader>
 
             <CardContent>
               {/* Order Details Grid */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">{t('orderTracking.exchangeDetails')}</h3>
-                  <div className="space-y-4">
+              <div className="grid lg:grid-cols-2 gap-6 sm:gap-8">
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-base sm:text-lg font-semibold">{t('orderTracking.exchangeDetails')}</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     <div className="flex justify-between" data-testid="row-send-amount">
                       <span className="text-muted-foreground">{t('exchange.youSend')}:</span>
                       <span className="font-medium">{order.fromAmount} {order.fromCurrency.toUpperCase()}</span>
@@ -248,9 +305,9 @@ export default function OrderStatus() {
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">{t('orderTracking.paymentInfo')}</h3>
-                  <div className="space-y-4">
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-base sm:text-lg font-semibold">{t('orderTracking.paymentInfo')}</h3>
+                  <div className="space-y-4 sm:space-y-4">
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-muted-foreground text-sm">{t('orderTracking.depositAddress')}:</span>
@@ -258,24 +315,25 @@ export default function OrderStatus() {
                           variant="ghost"
                           size="sm"
                           onClick={() => copyToClipboard(order.depositAddress, 'Deposit address')}
+                          className="h-9 w-9 p-0 sm:h-8 sm:w-8"
                           data-testid="button-copy-address"
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono break-all" data-testid="text-deposit-address">
+                      <div className="bg-muted/50 rounded-lg p-3 sm:p-4">
+                        <code className="text-xs sm:text-sm font-mono break-all leading-relaxed" data-testid="text-deposit-address">
                           {order.depositAddress}
                         </code>
                       </div>
                     </div>
                     
-                    {order.cardDetails && (
+                    {validCardDetails && (
                       <div>
                         <span className="text-muted-foreground text-sm">{t('orderTracking.payoutDetails')}:</span>
                         <div className="bg-muted/50 rounded-lg p-3 mt-1">
                           <span className="text-sm" data-testid="text-payout-details">
-                            Card: {order.cardDetails.number} ({order.cardDetails.bankName})
+                            Card: {validCardDetails.number} ({validCardDetails.bankName})
                           </span>
                         </div>
                       </div>
@@ -290,17 +348,21 @@ export default function OrderStatus() {
                     {order.txHash && (
                       <div>
                         <span className="text-muted-foreground text-sm">Transaction Hash:</span>
-                        <div className="bg-muted/50 rounded-lg p-3 mt-1 flex items-center justify-between">
-                          <code className="text-sm font-mono break-all" data-testid="text-tx-hash">
-                            {order.txHash}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(order.txHash!, 'Transaction hash')}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
+                        <div className="bg-muted/50 rounded-lg p-3 sm:p-4 mt-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <code className="text-xs sm:text-sm font-mono break-all leading-relaxed flex-1" data-testid="text-tx-hash">
+                              {order.txHash}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(order.txHash!, 'Transaction hash')}
+                              className="h-9 w-9 p-0 sm:h-8 sm:w-8 flex-shrink-0"
+                              data-testid="button-copy-tx-hash"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -309,17 +371,18 @@ export default function OrderStatus() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-border">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8 pt-8 border-t border-border">
                 <Button
                   variant="secondary"
-                  className="flex-1"
+                  className="flex-1 h-11 sm:h-10"
                   onClick={() => copyToClipboard(order.depositAddress, 'Deposit address')}
                   data-testid="button-copy-address-main"
                 >
+                  <Copy className="w-4 h-4 mr-2" />
                   {t('orderTracking.copyAddress')}
                 </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 h-11 sm:h-10"
                   onClick={() => {
                     // This would typically open a support chat or contact form
                     toast({
