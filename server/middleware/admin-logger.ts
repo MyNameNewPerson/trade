@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import { storage } from '../storage';
 import type { InsertAdminLog } from '@shared/schema';
 
@@ -18,7 +18,7 @@ export const logAdminAction = (
   target: string,
   description: string
 ): RequestHandler => {
-  return async (req: AdminActionRequest & any, res, next) => {
+  return async (req: AdminActionRequest, res, next) => {
     // Store action details for later logging
     req.adminAction = {
       action,
@@ -27,9 +27,10 @@ export const logAdminAction = (
       metadata: {
         method: req.method,
         path: req.path,
-        body: req.body,
+        // SECURITY: Exclude req.body completely to prevent secret leaks
         params: req.params,
-        query: req.query
+        query: req.query,
+        userAgent: req.get('User-Agent')
       }
     };
 
@@ -38,7 +39,7 @@ export const logAdminAction = (
   };
 };
 
-export const executeAdminLog: RequestHandler = async (req: AdminActionRequest & any, res, next) => {
+export const executeAdminLog: RequestHandler = async (req: AdminActionRequest, res, next) => {
   const originalSend = res.send;
   
   // Override res.send to capture response and log action
@@ -46,9 +47,12 @@ export const executeAdminLog: RequestHandler = async (req: AdminActionRequest & 
     // Only log if action was successful (not an error response)
     if (req.adminAction && res.statusCode >= 200 && res.statusCode < 300) {
       const user = req.user;
-      if (user?.claims?.sub) {
+      // Fix: Use req.user.id (from database) instead of req.user.claims.sub
+      const adminId = user?.id || user?.claims?.sub;
+      
+      if (adminId) {
         const logData: InsertAdminLog = {
-          adminId: user.claims.sub.toString(),
+          adminId: adminId.toString(),
           action: req.adminAction.action,
           target: req.adminAction.target,
           targetId: req.adminAction.targetId || req.params.id || null,
@@ -66,6 +70,8 @@ export const executeAdminLog: RequestHandler = async (req: AdminActionRequest & 
         storage.createAdminLog(logData).catch(error => {
           console.error('Failed to log admin action:', error);
         });
+      } else {
+        console.error('Admin log failed: No admin ID found in request');
       }
     }
 
@@ -77,7 +83,7 @@ export const executeAdminLog: RequestHandler = async (req: AdminActionRequest & 
 };
 
 // Helper function to update targetId after creation
-export const updateAdminLogTargetId = (req: AdminActionRequest & any, targetId: string) => {
+export const updateAdminLogTargetId = (req: AdminActionRequest, targetId: string) => {
   if (req.adminAction) {
     req.adminAction.targetId = targetId;
   }

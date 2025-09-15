@@ -25,7 +25,9 @@ adminRouter.use(executeAdminLog);
 // =====================
 
 // Get admin stats for dashboard
-adminRouter.get('/stats', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/stats',
+  logAdminAction('view_stats', AdminTargets.PLATFORM_SETTING, 'Admin viewed platform stats'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const stats = await storage.getAdminStats();
     res.json(stats);
@@ -39,7 +41,9 @@ adminRouter.get('/stats', (async (req: AuthRequest, res: Response) => {
 }) as RequestHandler);
 
 // Get dashboard data (stats + recent activity)
-adminRouter.get('/dashboard', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/dashboard',
+  logAdminAction('view_dashboard', AdminTargets.PLATFORM_SETTING, 'Admin viewed dashboard'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const [stats, recentLogs, recentOrders] = await Promise.all([
       storage.getAdminStats(),
@@ -66,7 +70,9 @@ adminRouter.get('/dashboard', (async (req: AuthRequest, res: Response) => {
 // =====================
 
 // Get all users with pagination
-adminRouter.get('/users', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/users',
+  logAdminAction('list_users', AdminTargets.USER, 'Admin viewed users list'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -84,7 +90,9 @@ adminRouter.get('/users', (async (req: AuthRequest, res: Response) => {
 }) as RequestHandler);
 
 // Get specific user
-adminRouter.get('/users/:id', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/users/:id',
+  logAdminAction('view_user', AdminTargets.USER, 'Admin viewed user details'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const user = await storage.getUser(req.params.id);
     if (!user) {
@@ -198,7 +206,9 @@ adminRouter.delete('/users/:id',
 // =====================
 
 // Get telegram configs
-adminRouter.get('/telegram-configs', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/telegram-configs',
+  logAdminAction('list_telegram_configs', AdminTargets.TELEGRAM, 'Admin viewed telegram configs'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const configs = await storage.getTelegramConfigs();
     res.json(configs);
@@ -305,7 +315,9 @@ adminRouter.delete('/telegram-configs/:id',
 // =====================
 
 // Get wallet settings
-adminRouter.get('/wallets', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/wallets',
+  logAdminAction('list_wallets', AdminTargets.WALLET, 'Admin viewed wallet settings'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const wallets = await storage.getWalletSettings();
     res.json(wallets);
@@ -432,7 +444,9 @@ adminRouter.delete('/wallets/:id',
 // =====================
 
 // Get currencies
-adminRouter.get('/currencies', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/currencies',
+  logAdminAction('list_currencies', AdminTargets.CURRENCY, 'Admin viewed currencies'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const currencies = await storage.getCurrencies();
     res.json(currencies);
@@ -552,7 +566,9 @@ adminRouter.delete('/currencies/:id',
 // =====================
 
 // Get exchange methods
-adminRouter.get('/exchange-methods', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/exchange-methods',
+  logAdminAction('list_exchange_methods', AdminTargets.EXCHANGE_METHOD, 'Admin viewed exchange methods'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const methods = await storage.getExchangeMethods();
     res.json(methods);
@@ -659,7 +675,9 @@ adminRouter.delete('/exchange-methods/:id',
 // =====================
 
 // Get platform settings
-adminRouter.get('/settings', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/settings',
+  logAdminAction('view_settings', AdminTargets.PLATFORM_SETTING, 'Admin viewed platform settings'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const settings = await storage.getPlatformSettings();
     
@@ -723,7 +741,9 @@ adminRouter.post('/settings',
 // =====================
 
 // Get admin logs with pagination
-adminRouter.get('/logs', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/logs',
+  logAdminAction('view_logs', AdminTargets.PLATFORM_SETTING, 'Admin viewed audit logs'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -741,7 +761,9 @@ adminRouter.get('/logs', (async (req: AuthRequest, res: Response) => {
 }) as RequestHandler);
 
 // Get logs for specific admin
-adminRouter.get('/logs/:adminId', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/logs/:adminId',
+  logAdminAction('view_admin_logs', AdminTargets.PLATFORM_SETTING, 'Admin viewed specific admin logs'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -762,7 +784,9 @@ adminRouter.get('/logs/:adminId', (async (req: AuthRequest, res: Response) => {
 // =====================
 
 // Get all orders (existing endpoint but moved here for organization)
-adminRouter.get('/orders', (async (req: AuthRequest, res: Response) => {
+adminRouter.get('/orders',
+  logAdminAction('view_orders', 'order', 'Admin viewed orders list'),
+  (async (req: AuthRequest, res: Response) => {
   try {
     const orders = await storage.getOrders();
     res.json(orders);
