@@ -81,7 +81,7 @@ export function AuthProviders({
     );
   }
 
-  if (providers.length === 0) {
+  if (providers.length === 0 && !showLocalAuth) {
     return (
       <div className={`text-center p-4 ${className}`}>
         <p className="text-sm text-muted-foreground">No authentication providers available</p>
@@ -89,8 +89,8 @@ export function AuthProviders({
     );
   }
 
-  // If there's only one provider, show a simpler UI
-  if (providers.length === 1) {
+  // Always show the full UI with local auth when enabled
+  if (providers.length === 1 && !showLocalAuth) {
     const provider = providers[0];
     const isGoogleProvider = provider.id === 'google';
     return (
@@ -118,7 +118,7 @@ export function AuthProviders({
     );
   }
 
-  // Multiple providers - show all options with local auth
+  // Show all options with local auth
   return (
     <div className={className}>
       {/* Local Email/Password Authentication */}
