@@ -21,6 +21,7 @@ const About = lazy(() => import("@/pages/about"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminLoginPage = lazy(() => import("@/pages/admin-login").then(module => ({ default: module.AdminLoginPage })));
 const AdminDashboardPage = lazy(() => import("@/pages/admin-dashboard").then(module => ({ default: module.AdminDashboardPage })));
+const AdminUsersPage = lazy(() => import("@/pages/admin-users").then(module => ({ default: module.AdminUsersPage })));
 const Landing = lazy(() => import("@/pages/landing"));
 const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
 const RegisterPage = lazy(() => import("@/pages/register"));
@@ -72,6 +73,13 @@ function Router() {
         
         {/* Admin login page - accessible by everyone */}
         <Route path="/admin/login" component={AdminLoginPage} />
+        
+        {/* Admin users page - only for admin users */}
+        <Route path="/admin/users">
+          <ProtectedRoute requiredRole="admin">
+            <AdminUsersPage />
+          </ProtectedRoute>
+        </Route>
         
         {/* Admin dashboard - only for admin users */}
         <Route path="/admin">
