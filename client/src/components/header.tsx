@@ -179,8 +179,10 @@ export function Header() {
                         buttonSize="lg" 
                         layout="vertical"
                         title="Sign in to your account"
-                        showTitle={true}
+                        showTitle={false}
+                        showLocalAuth={true}
                         className="w-full"
+                        onSuccess={() => setIsMobileMenuOpen(false)}
                       />
                     </div>
                   )}
@@ -283,7 +285,8 @@ export function Header() {
                     buttonSize="sm" 
                     layout="vertical"
                     title="Choose your sign-in method"
-                    showTitle={true}
+                    showTitle={false}
+                    showLocalAuth={true}
                   />
                 </PopoverContent>
               </Popover>

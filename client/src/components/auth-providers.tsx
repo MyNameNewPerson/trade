@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LogIn, Loader2 } from "lucide-react";
 import { SiGoogle, SiGithub, SiReplit } from "react-icons/si";
+import { LocalAuth } from "./local-auth";
 
 interface Provider {
   id: string;
@@ -18,6 +19,8 @@ interface AuthProvidersProps {
   layout?: "vertical" | "horizontal";
   title?: string;
   showTitle?: boolean;
+  showLocalAuth?: boolean;
+  onSuccess?: () => void;
 }
 
 export function AuthProviders({ 
@@ -25,7 +28,9 @@ export function AuthProviders({
   buttonSize = "default", 
   layout = "vertical",
   title = "Sign in with",
-  showTitle = true
+  showTitle = true,
+  showLocalAuth = true,
+  onSuccess
 }: AuthProvidersProps) {
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,50 +118,43 @@ export function AuthProviders({
     );
   }
 
-  // Multiple providers - show all options
+  // Multiple providers - show all options with local auth
   return (
     <div className={className}>
-      {showTitle && (
-        <div className="text-center mb-4">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        </div>
+      {/* Local Email/Password Authentication */}
+      {showLocalAuth && (
+        <LocalAuth 
+          className="mb-6" 
+          onSuccess={onSuccess}
+        />
       )}
-      
-      <div className={`space-y-3 ${layout === 'horizontal' ? 'sm:space-y-0 sm:space-x-3 sm:flex' : ''}`}>
-        {providers.map((provider, index) => (
-          <div key={provider.id} className={layout === 'horizontal' ? 'flex-1' : ''}>
-            <Button
-              size={buttonSize}
-              variant="outline"
-              onClick={() => window.location.href = provider.url}
-              className={`w-full border-2 hover:border-primary/50 transition-colors ${
-                layout === 'horizontal' ? 'flex-1' : ''
-              }`}
-              data-testid={`button-login-${provider.id}`}
-            >
-              {provider.icon}
-              <span className="ml-2">
-                {layout === 'horizontal' && providers.length > 2 ? provider.name : `Continue with ${provider.name}`}
-              </span>
-            </Button>
-            
-            {/* Add separator between providers except for the last one */}
-            {index < providers.length - 1 && layout === 'vertical' && (
-              <div className="flex items-center my-4">
-                <Separator className="flex-1" />
-                <span className="px-2 text-xs text-muted-foreground">or</span>
-                <Separator className="flex-1" />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      
-      {providers.length > 1 && (
-        <div className="mt-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            Choose your preferred authentication method
-          </p>
+
+      {/* OAuth Providers */}
+      {providers.length > 0 && (
+        <div className="space-y-3">
+          {providers.map((provider, index) => (
+            <div key={provider.id}>
+              <Button
+                size={buttonSize}
+                onClick={() => window.location.href = provider.url}
+                className={`w-full ${provider.color || 'bg-primary hover:bg-primary/90'} ${
+                  provider.id === 'google' ? 'font-semibold' : ''
+                }`}
+                data-testid={`button-login-${provider.id}`}
+              >
+                {provider.icon}
+                <span className="ml-2">
+                  {provider.id === 'google' ? 'Sign in with Google' : `Continue with ${provider.name}`}
+                </span>
+                <LogIn className="w-4 h-4 ml-2" />
+              </Button>
+              {provider.id === 'google' && (
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Secure authentication with your Google account
+                </p>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
