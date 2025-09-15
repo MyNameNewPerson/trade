@@ -23,6 +23,8 @@ const AdminLoginPage = lazy(() => import("@/pages/admin-login").then(module => (
 const AdminDashboardPage = lazy(() => import("@/pages/admin-dashboard").then(module => ({ default: module.AdminDashboardPage })));
 const AdminUsersPage = lazy(() => import("@/pages/admin-users").then(module => ({ default: module.AdminUsersPage })));
 const AdminTelegramPage = lazy(() => import("@/pages/admin-telegram").then(module => ({ default: module.AdminTelegramPage })));
+const AdminCurrenciesPage = lazy(() => import("@/pages/admin-currencies").then(module => ({ default: module.AdminCurrenciesPage })));
+const AdminExchangeMethodsPage = lazy(() => import("@/pages/admin-exchange-methods").then(module => ({ default: module.AdminExchangeMethodsPage })));
 const Landing = lazy(() => import("@/pages/landing"));
 const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
 const RegisterPage = lazy(() => import("@/pages/register"));
@@ -86,6 +88,20 @@ function Router() {
         <Route path="/admin/telegram">
           <ProtectedRoute requiredRole="admin">
             <AdminTelegramPage />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Admin currencies page - only for admin users */}
+        <Route path="/admin/currencies">
+          <ProtectedRoute requiredRole="admin">
+            <AdminCurrenciesPage />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Admin exchange methods page - only for admin users */}
+        <Route path="/admin/exchanges">
+          <ProtectedRoute requiredRole="admin">
+            <AdminExchangeMethodsPage />
           </ProtectedRoute>
         </Route>
         
