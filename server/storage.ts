@@ -1,5 +1,5 @@
-import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type CreateOrderRequest } from "@shared/schema";
-import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings } from "@shared/schema";
+import { type Currency, type ExchangeRate, type Order, type KycRequest, type User, type WalletSetting, type PlatformSetting, type EmailToken, type InsertCurrency, type InsertExchangeRate, type InsertOrder, type InsertKycRequest, type InsertUser, type UpsertUser, type InsertWalletSetting, type InsertPlatformSetting, type InsertEmailToken, type CreateOrderRequest } from "@shared/schema";
+import { currencies, exchangeRates, orders, kycRequests, users, walletSettings, platformSettings, emailTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { exchangeRateService } from "./services/exchange-api";
 import { telegramService } from "./services/telegram";
@@ -35,6 +35,12 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  activateUser(userId: string): Promise<boolean>;
+  
+  // Email token operations
+  createEmailToken(token: InsertEmailToken): Promise<EmailToken>;
+  getEmailToken(token: string): Promise<EmailToken | undefined>;
+  deleteEmailToken(token: string): Promise<boolean>;
   
   // Wallet settings operations
   getWalletSettings(): Promise<WalletSetting[]>;
@@ -563,6 +569,46 @@ export class PostgreSQLStorage implements IStorage {
       .returning();
 
     return result[0];
+  }
+
+  async activateUser(userId: string): Promise<boolean> {
+    try {
+      const result = await db.update(users)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error activating user:', error);
+      return false;
+    }
+  }
+
+  // Email token operations
+  async createEmailToken(token: InsertEmailToken): Promise<EmailToken> {
+    const result = await db.insert(emailTokens).values(token).returning();
+    return result[0];
+  }
+
+  async getEmailToken(token: string): Promise<EmailToken | undefined> {
+    const result = await db.select().from(emailTokens)
+      .where(eq(emailTokens.token, token))
+      .limit(1);
+    return result[0];
+  }
+
+  async deleteEmailToken(token: string): Promise<boolean> {
+    try {
+      const result = await db.delete(emailTokens)
+        .where(eq(emailTokens.token, token))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting email token:', error);
+      return false;
+    }
   }
 
   // Wallet settings operations

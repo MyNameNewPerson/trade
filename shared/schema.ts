@@ -72,13 +72,23 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  password: varchar("password"), // For local auth
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: text("role").notNull().default('user'), // 'admin', 'user'
-  isActive: boolean("is_active").default(true).notNull(),
+  isActive: boolean("is_active").default(false).notNull(), // Default to false for email confirmation
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Email confirmation tokens
+export const emailTokens = pgTable("email_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 }).unique().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const walletSettings = pgTable("wallet_settings", {
@@ -109,6 +119,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const upsertUserSchema = createInsertSchema(users).pick({ id: true, email: true, firstName: true, lastName: true, profileImageUrl: true });
 export const insertWalletSettingSchema = createInsertSchema(walletSettings).omit({ id: true, createdAt: true });
 export const insertPlatformSettingSchema = createInsertSchema(platformSettings).omit({ id: true, updatedAt: true });
+export const insertEmailTokenSchema = createInsertSchema(emailTokens).omit({ id: true, createdAt: true });
 
 export type Currency = typeof currencies.$inferSelect;
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
@@ -117,6 +128,7 @@ export type KycRequest = typeof kycRequests.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type WalletSetting = typeof walletSettings.$inferSelect;
 export type PlatformSetting = typeof platformSettings.$inferSelect;
+export type EmailToken = typeof emailTokens.$inferSelect;
 
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
@@ -126,6 +138,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertWalletSetting = z.infer<typeof insertWalletSettingSchema>;
 export type InsertPlatformSetting = z.infer<typeof insertPlatformSettingSchema>;
+export type InsertEmailToken = z.infer<typeof insertEmailTokenSchema>;
 
 // Additional validation schemas for API
 export const createOrderSchema = z.object({
@@ -157,6 +170,18 @@ export const createUserSchema = z.object({
   role: z.enum(['admin', 'user']).default('user'),
 });
 
+export const registerSchema = z.object({
+  login: z.string().min(1, "Login is required"),
+  email: z.string().email("Invalid email format"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+  passwordConfirm: z.string(),
+}).refine((data) => data.password === data.passwordConfirm, {
+  message: "Passwords don't match",
+  path: ["passwordConfirm"],
+});
+
 export const updateWalletSchema = z.object({
   currency: z.string(),
   address: z.string().min(1),
@@ -173,5 +198,6 @@ export const updateSettingSchema = z.object({
 
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type CreateUserRequest = z.infer<typeof createUserSchema>;
+export type RegisterRequest = z.infer<typeof registerSchema>;
 export type UpdateWalletRequest = z.infer<typeof updateWalletSchema>;
 export type UpdateSettingRequest = z.infer<typeof updateSettingSchema>;

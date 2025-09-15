@@ -22,6 +22,8 @@ const AdminLoginPage = lazy(() => import("@/pages/admin-login").then(module => (
 const AdminPanelPage = lazy(() => import("@/pages/admin-panel").then(module => ({ default: module.AdminPanelPage })));
 const Landing = lazy(() => import("@/pages/landing"));
 const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
+const RegisterPage = lazy(() => import("@/pages/register"));
+const ActivatePage = lazy(() => import("@/pages/activate"));
 
 // High-performance loading component with skeleton
 function LoadingFallback() {
@@ -55,6 +57,10 @@ function Router() {
         <Route path="/rates" component={Rates} />
         <Route path="/support" component={Support} />
         <Route path="/about" component={About} />
+        
+        {/* Auth pages - accessible by everyone */}
+        <Route path="/register" component={RegisterPage} />
+        <Route path="/activate" component={ActivatePage} />
         
         {/* User dashboard - only for authenticated users */}
         {isAuthenticated && (

@@ -12,7 +12,7 @@ import { Copy, ArrowLeft, CheckCircle, Clock, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import QRCode from "qrcode.js";
+import QRCode from "qrcode";
 import type { Currency } from "@shared/schema";
 
 interface OrderData {
@@ -132,18 +132,29 @@ export default function OrderConfirmation() {
         // Clear any existing QR code
         qrCodeRef.current.innerHTML = '';
         
-        // Generate new QR code with the unique deposit address
-        const qr = new QRCode(qrCodeRef.current, {
-          text: depositAddress,
+        // Generate new QR code with the unique deposit address using new qrcode API
+        QRCode.toDataURL(depositAddress, {
           width: 200,
-          height: 200,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H,
+          color: { 
+            dark: '#000000',
+            light: '#ffffff' 
+          },
+          errorCorrectionLevel: 'H'
+        }).then((url: string) => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.style.width = '200px';
+          img.style.height = '200px';
+          img.alt = 'QR Code for Deposit Address';
+          qrCodeRef.current!.appendChild(img);
+          
+          setQrCodeGenerated(true);
+          setIsGeneratingAddress(false);
+        }).catch((error: any) => {
+          console.error('QR code generation failed:', error);
+          setIsGeneratingAddress(false);
+          throw error;
         });
-        
-        setQrCodeGenerated(true);
-        setIsGeneratingAddress(false);
       } catch (error) {
         console.error('Failed to generate QR code:', error);
         setIsGeneratingAddress(false);

@@ -1,6 +1,11 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import { type AuthRequest, authenticateToken, requireAdmin } from '../middleware/auth';
 import { storage } from '../storage';
+import { registerSchema } from '@shared/schema';
+import { z } from 'zod';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { emailService } from '../services/email';
 
 const authRouter = Router();
 
@@ -182,6 +187,239 @@ authRouter.patch('/users/:id/status', authenticateToken as RequestHandler, requi
     res.status(500).json({
       success: false,
       error: 'Internal server error',
+    });
+  }
+}) as RequestHandler);
+
+// Login with email and password
+authRouter.post('/login', (async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required',
+      });
+    }
+
+    // Find user by email
+    const user = await storage.getUserByEmail(email);
+
+    if (!user || !user.password) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+      });
+    }
+
+    // Check if account is activated
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        error: 'Account not activated. Please check your email and activate your account first.',
+      });
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+      });
+    }
+
+    // Create session object compatible with existing auth system
+    const sessionUser = {
+      claims: {
+        sub: user.id,
+        email: user.email,
+        first_name: user.firstName,
+        last_name: user.lastName,
+        profile_image_url: user.profileImageUrl,
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours from now
+      },
+      provider: 'local'
+    };
+
+    // Store user in session (compatible with passport session)
+    req.login(sessionUser, (err) => {
+      if (err) {
+        console.error('Session creation error:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Login failed. Please try again.',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isActive: user.isActive,
+        },
+      });
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Login failed. Please try again.',
+    });
+  }
+}) as RequestHandler);
+
+// Register new user with email confirmation
+authRouter.post('/register', (async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validatedData = registerSchema.parse(req.body);
+    const { login, email, password } = validatedData;
+
+    // Check if user with this email or login already exists
+    const existingUser = await storage.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'User with this email already exists' 
+      });
+    }
+
+    // Hash password with salt rounds 12 (2025 best practice)
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create user with inactive status
+    const newUser = await storage.createUser({
+      email,
+      password: hashedPassword,
+      firstName: login, // Use login as firstName for now
+      lastName: null,
+      profileImageUrl: null,
+      role: 'user',
+      isActive: false,
+    });
+
+    // Generate activation token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store activation token
+    await storage.createEmailToken({
+      userId: newUser.id,
+      token,
+      expiresAt,
+    });
+
+    // Send activation email
+    const emailSent = await emailService.sendActivationEmail(email, login, token);
+    
+    if (!emailSent) {
+      console.warn(`⚠️  Registration completed but activation email could not be sent to ${email}`);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Please check your email to activate your account.',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        isActive: newUser.isActive,
+      },
+      emailSent,
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: error.errors,
+      });
+    }
+
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Registration failed. Please try again.',
+    });
+  }
+}) as RequestHandler);
+
+// Activate user account with email token
+authRouter.get('/activate', (async (req: Request, res: Response) => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Activation token is required',
+      });
+    }
+
+    // Find the email token
+    const emailToken = await storage.getEmailToken(token);
+
+    if (!emailToken) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid or expired activation token',
+      });
+    }
+
+    // Check if token has expired
+    if (new Date() > new Date(emailToken.expiresAt)) {
+      // Clean up expired token
+      await storage.deleteEmailToken(token);
+      return res.status(400).json({
+        success: false,
+        error: 'Activation token has expired. Please register again.',
+      });
+    }
+
+    // Activate the user
+    const activated = await storage.activateUser(emailToken.userId);
+
+    if (!activated) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to activate account. Please try again.',
+      });
+    }
+
+    // Clean up the used token
+    await storage.deleteEmailToken(token);
+
+    // Get user info to return
+    const user = await storage.getUser(emailToken.userId);
+
+    res.json({
+      success: true,
+      message: 'Account activated successfully! You can now log in.',
+      user: user ? {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        isActive: user.isActive,
+      } : null,
+    });
+
+  } catch (error) {
+    console.error('Account activation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Account activation failed. Please try again.',
     });
   }
 }) as RequestHandler);
