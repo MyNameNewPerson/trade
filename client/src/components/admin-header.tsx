@@ -42,19 +42,16 @@ export function AdminHeader({ title, breadcrumbs = [], onMenuClick }: AdminHeade
   const [notifications] = useState(3); // Mock notifications count
 
   useEffect(() => {
-    // Get user info from localStorage or API
+    // Get user info via session-based auth
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
       try {
-        const response = await fetch('/api/auth/verify', {
-          headers: { 'Authorization': `Bearer ${token}` },
+        const response = await fetch('/api/auth/user', {
+          credentials: 'include', // Use session-based auth
         });
 
         if (response.ok) {
-          const result = await response.json();
-          setUser(result.user);
+          const userData = await response.json();
+          setUser(userData);
         }
       } catch (error) {
         console.error('Failed to get user info:', error);
@@ -64,13 +61,23 @@ export function AdminHeader({ title, breadcrumbs = [], onMenuClick }: AdminHeade
     checkAuth();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    setLocation('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      setLocation('/admin/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect even if logout fails
+      setLocation('/admin/login');
+    }
   };
 
   const getPageTitle = () => {

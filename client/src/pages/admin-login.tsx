@@ -34,17 +34,16 @@ export function AdminLoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Include cookies for session-based auth
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        if (result.token) {
-          localStorage.setItem("auth_token", result.token);
-          setLocation("/admin");
-        }
+        // For session-based auth, just redirect to admin after successful login
+        setLocation("/admin");
       } else {
-        throw new Error("Login failed");
+        const errorData = await response.json().catch(() => ({ message: "Login failed" }));
+        throw new Error(errorData.message || "Login failed");
       }
     } catch (err: any) {
       setError(err.message || "Login failed");

@@ -133,7 +133,6 @@ export function AdminUsersPage() {
   } = useQuery({
     queryKey: ['admin', 'users', filters],
     queryFn: async (): Promise<UsersResponse> => {
-      const token = localStorage.getItem('auth_token');
       const params = new URLSearchParams();
       
       if (filters.search) params.append('search', filters.search);
@@ -143,9 +142,7 @@ export function AdminUsersPage() {
       params.append('limit', filters.limit.toString());
 
       const response = await fetch(`/api/admin/users?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include', // Use session-based auth
       });
 
       if (!response.ok) {
