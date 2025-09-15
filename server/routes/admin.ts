@@ -11,6 +11,7 @@ import {
   insertCurrencySchema
 } from '@shared/schema';
 import { storage } from '../storage';
+import { currencyConverter } from '../services/currency-converter';
 import { z } from 'zod';
 
 const adminRouter = Router();
@@ -64,6 +65,120 @@ adminRouter.get('/dashboard',
     });
   }
 }) as RequestHandler);
+
+// Get enhanced dashboard stats with charts data
+adminRouter.get('/dashboard-stats',
+  logAdminAction('view_dashboard_stats', AdminTargets.PLATFORM_SETTING, 'Admin viewed enhanced dashboard stats'),
+  (async (req: AuthRequest, res: Response) => {
+  try {
+    const [stats, recentLogs, recentOrders] = await Promise.all([
+      storage.getAdminStats(),
+      storage.getAdminLogs(1, 10), // Recent 10 admin actions
+      storage.getOrders() // Get all orders for calculations
+    ]);
+
+    // Calculate real volume data from orders
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Get orders from last 7 days and calculate daily volumes
+    const recentOrdersForVolume = recentOrders.filter(order => 
+      new Date(order.createdAt) >= sevenDaysAgo && 
+      order.status === 'completed'
+    );
+
+    // Group orders by date for volume chart
+    const volumeByDay = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayOrders = recentOrdersForVolume.filter(order => 
+        new Date(order.createdAt).toISOString().split('T')[0] === dateStr
+      );
+      
+      const dayVolume = await dayOrders.reduce(async (sumPromise, order) => {
+        const sum = await sumPromise;
+        // Convert order amounts to USD equivalent using real exchange rates
+        const amount = parseFloat(order.fromAmount) || 0;
+        const usdValue = await currencyConverter.convertToUSD(amount, order.fromCurrency);
+        return sum + usdValue;
+      }, Promise.resolve(0));
+      
+      volumeByDay.push({
+        date: dateStr,
+        volume: Math.round(dayVolume),
+        orders: dayOrders.length
+      });
+    }
+
+    // Calculate currency distribution from orders
+    const currencyMap = new Map();
+    recentOrdersForVolume.forEach(order => {
+      const currency = order.fromCurrency;
+      const amount = parseFloat(order.fromAmount) || 0;
+      currencyMap.set(currency, (currencyMap.get(currency) || 0) + amount);
+    });
+
+    // Convert all currency amounts to USD for proper distribution calculation
+    const currencyUSDValues = new Map();
+    for (const [currency, amount] of currencyMap.entries()) {
+      const usdValue = await currencyConverter.convertToUSD(amount, currency);
+      currencyUSDValues.set(currency, usdValue);
+    }
+    
+    const totalCurrencyValue = Array.from(currencyUSDValues.values()).reduce((a, b) => a + b, 0);
+    const currencyDistribution = Array.from(currencyUSDValues.entries()).map(([currency, usdValue]) => ({
+      name: currency.toUpperCase(),
+      value: Math.round(usdValue), // Real USD conversion
+      percentage: totalCurrencyValue > 0 ? Math.round((usdValue / totalCurrencyValue) * 100 * 100) / 100 : 0,
+      color: getCurrencyColor(currency)
+    }));
+
+    // Calculate 24h metrics
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const ordersLast24h = recentOrders.filter(order => 
+      new Date(order.createdAt) >= oneDayAgo && 
+      order.status === 'completed'
+    );
+    
+    const totalVolume = await ordersLast24h.reduce(async (sumPromise, order) => {
+      const sum = await sumPromise;
+      const amount = parseFloat(order.fromAmount) || 0;
+      const usdValue = await currencyConverter.convertToUSD(amount, order.fromCurrency);
+      return sum + usdValue;
+    }, Promise.resolve(0));
+
+    res.json({
+      stats,
+      recentActivity: recentLogs.logs,
+      recentOrders: recentOrders.slice(0, 5),
+      exchanges24h: ordersLast24h.length,
+      totalVolume: Math.round(totalVolume),
+      volumeByDay,
+      currencyDistribution
+    });
+  } catch (error) {
+    console.error('Get dashboard stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+}) as RequestHandler);
+
+// Helper function for currency colors
+function getCurrencyColor(currency: string): string {
+  const colors: { [key: string]: string } = {
+    'btc': '#f97316',
+    'eth': '#6366f1', 
+    'usdt': '#10b981',
+    'usdc': '#8b5cf6',
+    'doge': '#eab308',
+    'ltc': '#06b6d4'
+  };
+  return colors[currency.toLowerCase()] || '#6b7280';
+}
 
 // =====================
 // USERS MANAGEMENT
