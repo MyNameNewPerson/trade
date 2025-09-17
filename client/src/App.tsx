@@ -26,6 +26,7 @@ const AdminTelegramPage = lazy(() => import("@/pages/admin-telegram").then(modul
 const AdminWalletsPage = lazy(() => import("@/pages/admin-wallets").then(module => ({ default: module.AdminWalletsPage })));
 const AdminCurrenciesPage = lazy(() => import("@/pages/admin-currencies").then(module => ({ default: module.AdminCurrenciesPage })));
 const AdminExchangeMethodsPage = lazy(() => import("@/pages/admin-exchange-methods").then(module => ({ default: module.AdminExchangeMethodsPage })));
+const AdminLogsPage = lazy(() => import("@/pages/admin-logs").then(module => ({ default: module.AdminLogsPage })));
 const Landing = lazy(() => import("@/pages/landing"));
 const UserDashboard = lazy(() => import("@/pages/user-dashboard"));
 const RegisterPage = lazy(() => import("@/pages/register"));
@@ -110,6 +111,13 @@ function Router() {
         <Route path="/admin/exchanges">
           <ProtectedRoute requiredRole="admin">
             <AdminExchangeMethodsPage />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Admin logs page - only for admin users */}
+        <Route path="/admin/logs">
+          <ProtectedRoute requiredRole="admin">
+            <AdminLogsPage />
           </ProtectedRoute>
         </Route>
         
