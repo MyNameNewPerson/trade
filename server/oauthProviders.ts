@@ -117,15 +117,15 @@ export function setupOAuthProviders(app: Express, baseUrl: string) {
     console.log('⚠️  Google OAuth not configured - missing environment variables');
     console.log('ℹ️  To enable Google OAuth, set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables');
     
-    // Setup fallback routes that redirect to Replit Auth when Google is not configured
+    // Setup fallback routes that redirect to local auth when Google is not configured
     app.get('/api/auth/google', (req, res) => {
-      console.log('🔄 Google OAuth not configured - redirecting to Replit Auth');
-      res.redirect('/api/login');
+      console.log('🔄 Google OAuth not configured - redirecting to local auth');
+      res.redirect('/?login=true');
     });
 
     app.get('/api/auth/google/callback', (req, res) => {
-      console.log('🔄 Google OAuth not configured - redirecting to Replit Auth');
-      res.redirect('/api/login');
+      console.log('🔄 Google OAuth not configured - redirecting to local auth');
+      res.redirect('/?login=true');
     });
   }
 
@@ -184,14 +184,14 @@ export function setupOAuthProviders(app: Express, baseUrl: string) {
     if (!providers.includes('google')) {
       providers.unshift('google'); // Always include Google as primary
     }
-    if (!providers.includes('replit')) {
-      providers.push('replit'); // Add Replit as fallback
+    if (!providers.includes('local')) {
+      providers.push('local'); // Add local auth as fallback
     }
     
     return {
       providers,
       configured: configuredProviders.length,
-      available: ['google', 'github', 'replit'],
+      available: ['google', 'github', 'local'],
       cached_at: new Date().toISOString()
     };
   }
