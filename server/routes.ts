@@ -7,19 +7,35 @@ import { storage } from "./storage";
 import { createOrderSchema } from "@shared/schema";
 import { z } from "zod";
 import { security } from "./middleware/security";
-import { setupAuth, isAuthenticated, requireAdmin } from "./replitAuth";
+import { setupAuth as setupReplitAuth, isAuthenticated as isReplitAuthenticated, requireAdmin as requireReplitAdmin } from "./replitAuth";
+import { setupLocalAuth, isAuthenticated as isLocalAuthenticated, requireAdmin as requireLocalAdmin } from "./auth/local";
 import { setupOAuthProviders } from "./oauthProviders";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
-  // Setup Replit Auth
-  await setupAuth(app);
+  // Determine auth provider based on environment
+  const useReplitAuth = process.env.AUTH_PROVIDER === 'replit' && process.env.REPLIT_DOMAINS;
+  
+  // Setup authentication based on environment
+  let isAuthenticated, requireAdmin;
+  if (useReplitAuth) {
+    console.log('🔐 Using Replit authentication');
+    await setupReplitAuth(app);
+    isAuthenticated = isReplitAuthenticated;
+    requireAdmin = requireReplitAdmin;
+  } else {
+    console.log('🔐 Using local authentication');
+    await setupLocalAuth(app);
+    isAuthenticated = isLocalAuthenticated;
+    requireAdmin = requireLocalAdmin;
+  }
   
   // Setup OAuth providers (Google, GitHub)
-  const baseUrl = process.env.REPLIT_DOMAINS 
-    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-    : 'http://localhost:5000';
+  const baseUrl = process.env.APP_BASE_URL || 
+    (process.env.NODE_ENV === 'production' 
+      ? `https://${process.env.HOSTNAME || 'localhost'}` 
+      : 'http://localhost:5000');
   setupOAuthProviders(app, baseUrl);
   
   // Apply security middleware
